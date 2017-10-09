@@ -1,0 +1,12 @@
+Package: bayesprdopt
+Type: Package
+Title: Bayesian Prediction and portfolio optimization
+Version: 0.1.0
+Authors@R: person("Emmanuel", "Tsyawo",
+                     email = "estsyawo@temple.edu",
+                     role = c("aut", "cre"))
+Description: This package does normal bayesian predictive distributions and integrates these into portfolio decision making. For high dimensional data, one has the option of using supervised principal components for dimension reduction.
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.0.1
