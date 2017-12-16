@@ -32,7 +32,7 @@ This function computes predictive distributions using the linear regression mode
 best subset selection
 }
 \examples{
-Ddat<- prdtrade::DAT_ALL[1:75,]; dat<- Ddat[-20,]; xvec=Ddat[20,-1];
+Ddat<- bayesprdopt::DAT_ALL[1:75,]; dat<- Ddat[-20,]; xvec=Ddat[20,-1];
 mdist<- predbregbs(dat,xvec,mods=NULL,sbset=9,useW=F,ndrs=NULL,seed=NULL)
 plot(density(mdist[,4]))
 

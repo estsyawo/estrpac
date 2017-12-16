@@ -31,6 +31,7 @@ mat a matrix, with columns corresponding to predictive distributions
 Bayesian predictive distribution with supervised principal components
 }
 \examples{
-dat<- prdtrade::DAT_ALL[1:75,]; dat<- Ddat[-20,]; xvec=Ddat[20,-1];
+Ddat<- bayesprdopt::DAT_ALL[1:75,]; dat<- Ddat[-20,]; xvec=Ddat[20,-1];
 yspc<- predbregspc(dat,xvec); plot(density(yspc))
+
 }

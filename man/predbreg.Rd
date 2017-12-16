@@ -26,7 +26,7 @@ ydist draws from the predictive distribution
 This function computes the bayesian normal regression with the option of using weights
 }
 \examples{
-Ddat<- prdtrade::DAT_ALL[1:75,]; dat<- Ddat[-20,]; xvec=Ddat[20,-1];
+Ddat<- bayesprdopt::DAT_ALL[1:75,]; dat<- Ddat[-20,]; xvec=Ddat[20,-1];
 dd<- predbreg(dat = dat,xvec = xvec); plot(density(dd$ydist)); plot(density(dd$beta[,3]))
 ## A weighted version with non-default number of draws
 dw<- predbreg(dat = dat,xvec = xvec,useW = TRUE,ndrs = 9000); plot(density(dw$ydist))

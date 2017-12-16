@@ -34,8 +34,7 @@ simsigbet.default<- function(xx){
   Vb<- vcov(reg)/sigma(reg);
   S = sum(reg$residuals^2)
   set.seed(seed = seed)
-  sig<-invgamma::rinvgamma(ndrs,shape = (nr-nb)/2,scale = S/2)
-
+  sig<- 1/stats::rgamma(ndrs,shape = (nr-nb)/2,scale = 2/S)
   obtbets<- function(sig){
     set.seed(seed)
     beta=MASS::mvrnorm(n=1,bet,sig*Vb)
@@ -63,13 +62,19 @@ simsigbet.weight<- function(xx){
   if(is.null(seed)){
     seed=1
   }
-  y = dat[,1]; x = as.matrix(dat[,-1]); nr=nrow(x)
+  if(mean(W)<1){
+    W = W/mean(W) # scale up to make mean W=1
+  }
+  y = dat[,1]; x = as.matrix(dat[,-1]); 
   reg<-lm(y~as.matrix(x),weights = W)
   bet<-reg$coefficients; nb=length(bet)
-  Vb<- vcov(reg)/sigma(reg);
-  S = sum(reg$residuals^2)
-  set.seed(seed = seed)
-  sig<-invgamma::rinvgamma(ndrs,shape = (nr-nb)/2,scale = S/2)
+  Vb<- vcov(reg)/sigma(reg); #Vb=solve(t(x)%*%diag(W, nrow = length(W))%*%x)
+  S = sum(W*(reg$residuals^2))
+  set.seed(seed = seed); 
+  if(sum(abs(W))<=nb){
+    stop("Not enough degree of freedom for weighted error term variance")
+  }
+  sig<- 1/stats::rgamma(ndrs,shape = (sum(W)-nb)/2,scale = 2/S)
   obtbets<- function(sig){
     set.seed(seed)
     beta=MASS::mvrnorm(n=1,bet,sig*Vb)
@@ -147,7 +152,7 @@ predist<- function(baysobj,xvec){
 #' @return ydist draws from the predictive distribution
 #'
 #' @examples
-#' Ddat<- prdtrade::DAT_ALL[1:75,]; dat<- Ddat[-20,]; xvec=Ddat[20,-1];
+#' Ddat<- bayesprdopt::DAT_ALL[1:75,]; dat<- Ddat[-20,]; xvec=Ddat[20,-1];
 #' dd<- predbreg(dat = dat,xvec = xvec); plot(density(dd$ydist)); plot(density(dd$beta[,3]))
 #' ## A weighted version with non-default number of draws
 #' dw<- predbreg(dat = dat,xvec = xvec,useW = TRUE,ndrs = 9000); plot(density(dw$ydist))
@@ -196,7 +201,7 @@ predbregj<- function(j,dat,xvec,grd,useW=F,ndrs=NULL,seed=NULL){
 #' @return mat a matrix, with columns corresponding to predictive distributions
 #'
 #' @examples
-#' Ddat<- prdtrade::DAT_ALL[1:75,]; dat<- Ddat[-20,]; xvec=Ddat[20,-1];
+#' Ddat<- bayesprdopt::DAT_ALL[1:75,]; dat<- Ddat[-20,]; xvec=Ddat[20,-1];
 #' mdist<- predbregbs(dat,xvec,mods=NULL,sbset=9,useW=F,ndrs=NULL,seed=NULL)
 #' plot(density(mdist[,4]))
 #'
@@ -233,8 +238,10 @@ return(mat)
 #'
 
 #' @examples
-#' dat<- prdtrade::DAT_ALL[1:75,]; dat<- Ddat[-20,]; xvec=Ddat[20,-1];
+#' Ddat<- bayesprdopt::DAT_ALL[1:75,]; dat<- Ddat[-20,]; xvec=Ddat[20,-1];
 #' yspc<- predbregspc(dat,xvec); plot(density(yspc))
+#' 
+#' @export
 
 predbregspc<- function(dat,xvec,useW=F,ndrs=NULL,seed=NULL,lev1=0.1,lev2=0.95,maxc=3, minft=6){
   xx<-supc(dat=dat,xvec = xvec,lev1=lev1,lev2=lev2,maxc=maxc, minft=minft);
@@ -254,34 +261,59 @@ predspcj<- function(j,dat,useW = T){
 #===========================================================================================#
 #' A Generic Independence Metropolis-Hastings Algorithm
 #'
-#' \code{IndepMH} computes random draws of parameters using a normal proposal distribution.
+#' \code{IndepMHgen} computes random draws of parameters using a normal proposal distribution.
 #' This function implements a generic form of \code{IndepMH} from the package \code{bayesdistreg}
 #'
 #' @param start starting values of parameters for the MH algorithm.
 #' It is automatically generated from the normal proposal distribution but the user can also specify.
-#' @param posterior the posterior distribution function. 
+#' @param posterior the log posterior distribution function. 
 #' @param ... additional arguments to the posterior function
 #' Should take parameter input of the same length as \code{start} or \code{propob$mode}
 #' @param propob a list of mode and variance-covariance matrix of the normal proposal distribution. 
 #' Save list as propob=list(mode=mode,var=variance-covariance)
+#' @param const a vector function of parameters showing non-negative inequality constraints to be satisfied. 
 #' @param scale a value multiplied by \code{propob$var} in order to adjust the proposal distribution.
 #' The default is \code{1.5} but the user can adjust it until a satisfactory acceptance rate is obtained.
 #' @param iter number of random draws desired (default: 15000)
-#' @param burn burn-in period for the Random Walk MH algorithm (default: 1000)
-#' @return val a list of matrix of draws pardraws and the acceptance rate
+#' @param burn burn-in period for the MH algorithm (default: 1000)
+#' @return Matpram a matrix of parameter draws
+#' @return postvals vector of posterior values corresponding to parameter draws \code{Matpram}
+#' @return AcceptRatio the acceptance ratio
+#' 
+#' @examples 
+#' #a toy example for illustration
+#' ## f(c) = 1/(3.618*sqrt(pi))* * exp(-0.6*(c[1]-2)^2-0.4*(c[2]+2)^2) 
+#' # an improper posterior
+#' logpost = function(c) -0.6*(c[1]-2)^2-0.4*(c[2]+2)^2 #log posterior distribution
+#' optp<-optim(par=c(0,0),fn=logpost,control=list(fnscale=-1),hessian = T) 
+#' # laplace approximation of the posterior
+#' propob = list(mode=optp$par,var=-solve(optp$hessian)) #parameters of proposal distribution
+#' eigen(propob$var)$values # var-cov of proposal distribution is positive definite
+#' MHobj<- indepMHgen(posterior = logpost,propob = propob,scale = 2,iter = 6000)
+#' # create an independent Metropolis-Hastings object
+#' dim(MHobj$Matpram) # a 2 x 5000 matrix with columns corresponding to draws of c1 and c2
+#' par(mfrow=c(1,2))
+#' hist(MHobj$Matpram[1,],20,main = "Histogram c1",xlab = "c1")
+#' hist(MHobj$Matpram[2,],20,main = "Histogram c2",xlab = "c2")
+#' MHobj$AcceptRatio # acceptance ratio
 #'
 #' @export
 
-IndepMH<- function(start=NULL,posterior=NULL,...,propob=NULL,scale=1.5,iter=15000,burn=1000){
+indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,scale=1.5,iter=15000,burn=1000){
   varprop = scale*propob$var
   npar = length(propob$mode)
-  Mat = array(0, c(iter, npar))
-  if(is.null(start)){
-    start = MASS::mvrnorm(n=1,propob$mode,varprop)
-  }
-  Mat[1,] = start; AccptRate<-0
-  for(i in 2:iter){
+  Mat = array(0, c(iter, npar)); postvals<- c(0)
+
+  if(is.null(const))
+  {  
+    if(is.null(start)){
+      start = MASS::mvrnorm(n=1,propob$mode,varprop)
+    }
+    Mat[1,] = start; AccptRate<-0; postvals[1]<- posterior(start,...)
+    
+    for(i in 2:iter){
     start= Mat[i-1,]
+    set.seed(i)
     prop = MASS::mvrnorm(n=1,propob$mode,varprop)#make a draw from proposal dist
     lpa = posterior(prop,...); lpb = posterior(start,...)
     accprob = exp(lpa-lpb)
@@ -289,12 +321,121 @@ IndepMH<- function(start=NULL,posterior=NULL,...,propob=NULL,scale=1.5,iter=1500
     if(stats::runif(1)< accprob){
       Mat[i,]=prop
       AccptRate<- AccptRate +1
+      postvals[i]<- lpa
     }else{
-      Mat[i,]=start
+      Mat[i,]=start 
+      postvals[i]<- postvals[i-1]
     }
   }
+  }else{
+    if(is.null(start)){
+      start = MASS::mvrnorm(n=1,propob$mode,varprop)
+      while(any(const(start)<0)){
+        start = MASS::mvrnorm(n=1,propob$mode,varprop) ; cnt<- cnt+1
+        if(cnt>burn){stop("Cannot generate proposal draws within the constraint region")}
+      }
+    }
+    Mat[1,] = start; AccptRate<-0; postvals[1]<- posterior(start,...)
+    
+    for(i in 2:iter){
+      start= Mat[i-1,]
+      set.seed(i)
+      
+      prop = MASS::mvrnorm(n=1,propob$mode,varprop)#make a draw from proposal dist
+      cnt<- 0
+      while(any(const(prop)<0)){
+        prop = MASS::mvrnorm(n=1,propob$mode,varprop) ; cnt<- cnt+1
+        if(cnt>burn){stop("Cannot generate proposal draws within the constraint region")}
+      }
+      lpa = posterior(prop,...); lpb = posterior(start,...)
+      accprob = exp(lpa-lpb)
+      # the other part cancels out because the normal distribution is symmetric
+      if(stats::runif(1)< accprob){
+        Mat[i,]=prop
+        AccptRate<- AccptRate +1
+        postvals[i]<- lpa
+      }else{
+        Mat[i,]=start 
+        postvals[i]<- postvals[i-1]
+      }
+    }
+  }
+  
+  
   cat("IndepMH algorithm successful\n")
-  val = list(Matpram=Mat[-c(1:burn),],AcceptanceRate = AccptRate/iter)
+  val = list(Matpram=t(Mat[-c(1:burn),]),postvals=postvals[-c(1:burn)],AcceptRatio = AccptRate/iter)
   return(val)
 }
+#===========================================================================================#
+
+
+#' #===========================================================================================#
+#' # Take a value V in the support VecX get its y-value using the mapping VecX to VecY
+#' #' @export
+#' fitin<- function(V,VecX,VecY){
+#'   if(V>=min(VecX) & V<max(VecX)){
+#'     id = min(which(VecX>=V)); 
+#'     #fr = (V-VecX[id])/(abs(VecX[id]-VecX[id+1]))
+#'     #val= fr*VecY[id] + (1-fr)*VecY[id+1]
+#'     val= mean(VecY[id:(id+1)])
+#'     # if(fr>1){
+#'     #   val = VecY[id+1]
+#'     # }else if(fr<0){
+#'     #   val = VecY[id]
+#'     # }
+#'     
+#'   }else if(V==max(VecX)){
+#'     val = tail(VecY,n=1)
+#'   }else{
+#'     val = 1e-06
+#'   }
+#'   return(val)
+#' }
+
+#============================================
+#' Get density values
+#' 
+#' Get density values for a continuous distribution whose random draws are the vector 
+#' \code{vec}
+#' 
+#' @param vec continuous distribution whose random draws are elements of vec
+#' @param type the "probability" or "density" that is preferred as output
+#' 
+#' @return mval a vector of probability weights of each element of vec
+#' 
+#' @examples 
+#' set.seed(40); v = rnorm(1000)**2; plot(density(v)); # chi-square distributed
+#' # generate probability weights for each element of v: 
+#' dn<- getprobs(v); plot(dn$x,dn$y,type="l")
+#' 
+#' @export
+
+getprobs<- function(vec,type="probability"){
+  zz<- density(as.matrix(vec))
+  if(type=="probability"){
+  spdd<- stats::spline(zz$x,zz$y*zz$bw,xout = vec)
+  }else if(type=="density"){
+    spdd<- stats::spline(zz$x,zz$y,xout = vec)
+  }else{
+    stop(paste("Type ", type  ," not recognised. It is either \"probability\" or \"density\"",sep = ","))
+  }
+  cden<- cbind(spdd$x,spdd$y); cden<- cden[order(spdd$x),] #sort by x
+  mval = list(x=cden[,1],y=cden[,2])
+  return(mval)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
