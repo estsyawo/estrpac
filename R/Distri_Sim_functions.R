@@ -382,8 +382,8 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,scale
 #' 
 #' @examples 
 #' set.seed(40); v = rnorm(1000)**2; plot(density(v)); # chi-square distributed
-#' # generate probability weights for each element of v: 
-#' dn<- getprobs(v); plot(dn$x,dn$y,type="l")
+#' # obtain pdfs at a vector of values x: 
+#' x=c(0,2,4); dn<- getprobs(v,val=x); points(dn$x, dn$y, col = "red");dn
 #' 
 #' @export
 
