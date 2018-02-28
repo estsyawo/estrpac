@@ -368,30 +368,6 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,scale
 }
 #===========================================================================================#
 
-
-#' #===========================================================================================#
-#' # Take a value V in the support VecX get its y-value using the mapping VecX to VecY
-#' #' @export
-#' fitin<- function(V,VecX,VecY){
-#'   if(V>=min(VecX) & V<max(VecX)){
-#'     id = min(which(VecX>=V)); 
-#'     #fr = (V-VecX[id])/(abs(VecX[id]-VecX[id+1]))
-#'     #val= fr*VecY[id] + (1-fr)*VecY[id+1]
-#'     val= mean(VecY[id:(id+1)])
-#'     # if(fr>1){
-#'     #   val = VecY[id+1]
-#'     # }else if(fr<0){
-#'     #   val = VecY[id]
-#'     # }
-#'     
-#'   }else if(V==max(VecX)){
-#'     val = tail(VecY,n=1)
-#'   }else{
-#'     val = 1e-06
-#'   }
-#'   return(val)
-#' }
-
 #============================================
 #' Get density values
 #' 
@@ -399,6 +375,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,scale
 #' \code{vec}
 #' 
 #' @param vec continuous distribution whose random draws are elements of vec
+#' @param val a vector of values in the support of vec for which to get pdfs
 #' @param type the "probability" or "density" that is preferred as output
 #' 
 #' @return mval a vector of probability weights of each element of vec
@@ -410,32 +387,27 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,scale
 #' 
 #' @export
 
-getprobs<- function(vec,type="probability"){
-  zz<- density(as.matrix(vec))
-  if(type=="probability"){
-  spdd<- stats::spline(zz$x,zz$y*zz$bw,xout = vec)
-  }else if(type=="density"){
-    spdd<- stats::spline(zz$x,zz$y,xout = vec)
-  }else{
-    stop(paste("Type ", type  ," not recognised. It is either \"probability\" or \"density\"",sep = ","))
+getprobs<- function(vec,val=NULL,type="probability"){
+  vec<- sort(vec)
+  if(is.null(val)){
+    val=vec
   }
-  cden<- cbind(spdd$x,spdd$y); cden<- cden[order(spdd$x),] #sort by x
-  mval = list(x=cden[,1],y=cden[,2])
+  zz<- density(as.matrix(vec),n=1024)
+  fsp =stats::splinefun(zz$x, zz$y)
+  const<-integrate(fsp, min(zz$x), max(zz$x))
+  if(type=="probability"){
+    if(abs(const$value-1) < 1e-03){
+      spdd<- stats::spline(zz$x,zz$y,xout = val)
+    }else{
+    fh1<- ks::kde(x=vec,binned = TRUE)
+    d1<- ks::dkde(x=vec,fhat = fh1)
+    spdd<- stats::spline(vec,d1,xout = val)
+    }
+    }else if(type=="density"){
+    spdd<- stats::spline(zz$x,zz$y,xout = val)
+    }else{
+    stop(paste("Type ", type  ," not recognised. It is either \"probability\" or \"density\"",sep = ","))
+    }
+  mval = list(x=spdd$x,y=spdd$y)
   return(mval)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

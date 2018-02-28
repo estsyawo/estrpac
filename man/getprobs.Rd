@@ -2,34 +2,14 @@
 % Please edit documentation in R/Distri_Sim_functions.R
 \name{getprobs}
 \alias{getprobs}
-\title{#===========================================================================================#
-# Take a value V in the support VecX get its y-value using the mapping VecX to VecY
-#' @export
-fitin<- function(V,VecX,VecY){
-  if(V>=min(VecX) & V<max(VecX)){
-    id = min(which(VecX>=V)); 
-    #fr = (V-VecX[id])/(abs(VecX[id]-VecX[id+1]))
-    #val= fr*VecY[id] + (1-fr)*VecY[id+1]
-    val= mean(VecY[id:(id+1)])
-    # if(fr>1){
-    #   val = VecY[id+1]
-    # }else if(fr<0){
-    #   val = VecY[id]
-    # }
-    
-  }else if(V==max(VecX)){
-    val = tail(VecY,n=1)
-  }else{
-    val = 1e-06
-  }
-  return(val)
-}
-Get density values}
+\title{Get density values}
 \usage{
-getprobs(vec, type = "probability")
+getprobs(vec, val = NULL, type = "probability")
 }
 \arguments{
 \item{vec}{continuous distribution whose random draws are elements of vec}
+
+\item{val}{a vector of values in the support of vec for which to get pdfs}
 
 \item{type}{the "probability" or "density" that is preferred as output}
 }
