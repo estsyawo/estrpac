@@ -18,7 +18,7 @@ simsigbet <- function(xx) UseMethod("simsigbet")
 #===========================================================================================#
 
 #' @importFrom invgamma rinvgamma
-#'
+#' 
 #' @export
 simsigbet.default<- function(xx){
   dat=as.matrix(xx$dat); ndrs=xx$ndrs;seed=xx$seed
@@ -285,7 +285,7 @@ predspcj<- function(j,dat,useW = T){
 #' ## f(c) = 1/(3.618*sqrt(pi))* * exp(-0.6*(c[1]-2)^2-0.4*(c[2]+2)^2) 
 #' # an improper posterior
 #' logpost = function(c) -0.6*(c[1]-2)^2-0.4*(c[2]+2)^2 #log posterior distribution
-#' optp<-optim(par=c(0,0),fn=logpost,control=list(fnscale=-1),hessian = T) 
+#' optp<-optim(par=c(0,0),fn=logpost,control=list(fnscale=-1),hessian = TRUE) 
 #' # laplace approximation of the posterior
 #' propob = list(mode=optp$par,var=-solve(optp$hessian)) #parameters of proposal distribution
 #' eigen(propob$var)$values # var-cov of proposal distribution is positive definite

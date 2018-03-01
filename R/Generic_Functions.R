@@ -78,3 +78,23 @@ parsply<- function(X,fn,type="PSOCK",...){#parallelise a function
   return(val)
 }
 
+#===========================================================================================#
+#' Parallel compute
+#' 
+#' This function takes a function and margin and parallel computes, returning output in a list.
+#' 
+#' @param X a vector as used in lapply() family of functions
+#' @param fn the function to be run in parallel
+#' @param type the type of parallel computation; \code{"PSOCK"} which is compatible with all operating
+#' systems or \code{"FORK"} which is only compatible on Mac/Linux platforms
+#' @param ... additional inputs for the function \code{fn}.
+#' @return val output in a simplified form: vector or matrix
+#' 
+#' @export
+parlply<- function(X,fn,type="PSOCK",...){#parallelise a function
+  nc<-parallel::detectCores()-1
+  c1<-parallel::makeCluster(nc,type = type)
+  val<-parallel::parLapply(c1,X,fn,...)
+  parallel::stopCluster(c1) 
+  return(val)
+}
