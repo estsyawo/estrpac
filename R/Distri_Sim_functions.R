@@ -329,6 +329,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,scale
   }
   }else{
     if(is.null(start)){
+      cnt<- 0
       start = MASS::mvrnorm(n=1,propob$mode,varprop)
       while(any(const(start)<0)){
         start = MASS::mvrnorm(n=1,propob$mode,varprop) ; cnt<- cnt+1
