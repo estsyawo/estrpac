@@ -4,7 +4,7 @@
 \alias{parsply}
 \title{Parallel compute}
 \usage{
-parsply(X, fn, type = "PSOCK", ...)
+parsply(X, fn, type = "PSOCK", nc = 1, ...)
 }
 \arguments{
 \item{X}{a vector as used in lapply() family of functions}
@@ -12,7 +12,8 @@ parsply(X, fn, type = "PSOCK", ...)
 \item{fn}{the function to be run in parallel}
 
 \item{type}{the type of parallel computation; \code{"PSOCK"} which is compatible with all operating
-systems or \code{"FORK"} which is only compatible on Mac/Linux platforms}
+systems or \code{"FORK"} which is only compatible on Mac/Linux platforms
+#' @param nc number of clusters to use}
 
 \item{...}{additional inputs for the function \code{fn}.}
 }

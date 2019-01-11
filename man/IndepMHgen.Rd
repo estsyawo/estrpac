@@ -5,7 +5,8 @@
 \title{A Generic Independence Metropolis-Hastings Algorithm}
 \usage{
 indepMHgen(start = NULL, posterior = NULL, ..., propob = NULL,
-  const = NULL, scale = 1.5, iter = 15000, burn = 1000)
+  const = NULL, useed = TRUE, scale = 1.5, iter = 5000,
+  burn = floor(0.1 * iter), report = FALSE)
 }
 \arguments{
 \item{start}{starting values of parameters for the MH algorithm.
@@ -21,12 +22,16 @@ Save list as propob=list(mode=mode,var=variance-covariance)}
 
 \item{const}{a vector function of parameters showing non-negative inequality constraints to be satisfied.}
 
+\item{useed}{a logical to use seed for reproducibility or not. Default is true}
+
 \item{scale}{a value multiplied by \code{propob$var} in order to adjust the proposal distribution.
 The default is \code{1.5} but the user can adjust it until a satisfactory acceptance rate is obtained.}
 
 \item{iter}{number of random draws desired (default: 15000)}
 
-\item{burn}{burn-in period for the MH algorithm (default: 1000)}
+\item{burn}{burn-in period for the MH algorithm (default: floor(iter/10))}
+
+\item{report}{a logical for reporting algorithm success; default - FALSE}
 }
 \value{
 Matpram a matrix of parameter draws
@@ -41,7 +46,7 @@ This function implements a generic form of \code{IndepMH} from the package \code
 }
 \examples{
 #a toy example for illustration
-## f(c) = 1/(3.618*sqrt(pi))* * exp(-0.6*(c[1]-2)^2-0.4*(c[2]+2)^2) 
+## f(c) = 1/(3.618*sqrt(pi))* exp(-0.6*(c[1]-2)^2-0.4*(c[2]+2)^2) 
 # an improper posterior
 logpost = function(c) -0.6*(c[1]-2)^2-0.4*(c[2]+2)^2 #log posterior distribution
 optp<-optim(par=c(0,0),fn=logpost,control=list(fnscale=-1),hessian = TRUE) 

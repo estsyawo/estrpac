@@ -66,12 +66,12 @@ testSR<- function(ydist=NULL,yt=0,yhat=NULL,ysd=NULL){
 #' @param fn the function to be run in parallel
 #' @param type the type of parallel computation; \code{"PSOCK"} which is compatible with all operating
 #' systems or \code{"FORK"} which is only compatible on Mac/Linux platforms
+#' #' @param nc number of clusters to use
 #' @param ... additional inputs for the function \code{fn}.
 #' @return val output in a simplified form: vector or matrix
 #' 
 #' @export
-parsply<- function(X,fn,type="PSOCK",...){#parallelise a function
-  nc<-parallel::detectCores()-1
+parsply<- function(X,fn,type="PSOCK",nc=1,...){#parallelise a function
   c1<-parallel::makeCluster(nc,type = type)
   val<-parallel::parSapply(c1,X,fn,...)
   parallel::stopCluster(c1) 
@@ -87,12 +87,12 @@ parsply<- function(X,fn,type="PSOCK",...){#parallelise a function
 #' @param fn the function to be run in parallel
 #' @param type the type of parallel computation; \code{"PSOCK"} which is compatible with all operating
 #' systems or \code{"FORK"} which is only compatible on Mac/Linux platforms
+#' @param nc number of clusters to use
 #' @param ... additional inputs for the function \code{fn}.
 #' @return val output in a simplified form: vector or matrix
 #' 
 #' @export
-parlply<- function(X,fn,type="PSOCK",...){#parallelise a function
-  nc<-parallel::detectCores()-1
+parlply<- function(X,fn,type="PSOCK",nc=1,...){#parallelise a function
   c1<-parallel::makeCluster(nc,type = type)
   val<-parallel::parLapply(c1,X,fn,...)
   parallel::stopCluster(c1) 

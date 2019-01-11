@@ -272,17 +272,19 @@ predspcj<- function(j,dat,useW = T){
 #' @param propob a list of mode and variance-covariance matrix of the normal proposal distribution. 
 #' Save list as propob=list(mode=mode,var=variance-covariance)
 #' @param const a vector function of parameters showing non-negative inequality constraints to be satisfied. 
+#' @param useed a logical to use seed for reproducibility or not. Default is true
 #' @param scale a value multiplied by \code{propob$var} in order to adjust the proposal distribution.
 #' The default is \code{1.5} but the user can adjust it until a satisfactory acceptance rate is obtained.
 #' @param iter number of random draws desired (default: 15000)
-#' @param burn burn-in period for the MH algorithm (default: 1000)
+#' @param burn burn-in period for the MH algorithm (default: floor(iter/10))
+#' @param report a logical for reporting algorithm success; default - FALSE
 #' @return Matpram a matrix of parameter draws
 #' @return postvals vector of posterior values corresponding to parameter draws \code{Matpram}
 #' @return AcceptRatio the acceptance ratio
 #' 
 #' @examples 
 #' #a toy example for illustration
-#' ## f(c) = 1/(3.618*sqrt(pi))* * exp(-0.6*(c[1]-2)^2-0.4*(c[2]+2)^2) 
+#' ## f(c) = 1/(3.618*sqrt(pi))* exp(-0.6*(c[1]-2)^2-0.4*(c[2]+2)^2) 
 #' # an improper posterior
 #' logpost = function(c) -0.6*(c[1]-2)^2-0.4*(c[2]+2)^2 #log posterior distribution
 #' optp<-optim(par=c(0,0),fn=logpost,control=list(fnscale=-1),hessian = TRUE) 
@@ -299,7 +301,9 @@ predspcj<- function(j,dat,useW = T){
 #'
 #' @export
 
-indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,scale=1.5,iter=15000,burn=1000){
+indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
+                      useed=TRUE,scale=1.5,iter=5000,burn=floor(0.1*iter),
+                      report=FALSE){
   varprop = scale*propob$var
   npar = length(propob$mode)
   Mat = array(0, c(iter, npar)); postvals<- c(0)
@@ -307,13 +311,14 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,scale
   if(is.null(const))
   {  
     if(is.null(start)){
+      if(useed){set.seed(iter)}
       start = MASS::mvrnorm(n=1,propob$mode,varprop)
     }
     Mat[1,] = start; AccptRate<-0; postvals[1]<- posterior(start,...)
     
     for(i in 2:iter){
     start= Mat[i-1,]
-    set.seed(i)
+    if(useed){set.seed(i)}
     prop = MASS::mvrnorm(n=1,propob$mode,varprop)#make a draw from proposal dist
     lpa = posterior(prop,...); lpb = posterior(start,...)
     accprob = exp(lpa-lpb)
@@ -330,6 +335,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,scale
   }else{
     if(is.null(start)){
       cnt<- 0
+      if(useed){set.seed(iter+4)}
       start = MASS::mvrnorm(n=1,propob$mode,varprop)
       while(any(const(start)<0)){
         start = MASS::mvrnorm(n=1,propob$mode,varprop) ; cnt<- cnt+1
@@ -340,8 +346,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,scale
     
     for(i in 2:iter){
       start= Mat[i-1,]
-      set.seed(i)
-      
+      if(useed){set.seed(i)}
       prop = MASS::mvrnorm(n=1,propob$mode,varprop)#make a draw from proposal dist
       cnt<- 0
       while(any(const(prop)<0)){
@@ -361,9 +366,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,scale
       }
     }
   }
-  
-  
-  cat("IndepMH algorithm successful\n")
+  if(report){cat("IndepMH algorithm successful\n")}
   val = list(Matpram=t(Mat[-c(1:burn),]),postvals=postvals[-c(1:burn)],AcceptRatio = AccptRate/iter)
   return(val)
 }
