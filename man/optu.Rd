@@ -4,8 +4,8 @@
 \alias{optu}
 \title{Generate distribution of decision parameters}
 \usage{
-optu(start, rho, W0, R1, pi1, A, cpars, ub, uth, scale = 1.1, iter = 15000,
-  burn = 1000)
+optu(start, rho, W0, R1, pi1, A, cpars, ub, uth, scale = 1.1,
+  iter = 15000, burn = 1000)
 }
 \arguments{
 \item{start}{suggested starting values}

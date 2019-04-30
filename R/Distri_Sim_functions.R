@@ -99,14 +99,13 @@ simsigbet.weight<- function(xx){
 #' @return beta an ndrs x p matrix of coefficient draws, p is the number of OLS coefficients
 #' @return sig a vector of variance (sigma squared) draws
 #'
-#' @importFrom genmle distnz
 #'
 #' @export
 
 baysnreg<- function(dat,useW=F,xvec,ndrs=NULL,seed=NULL){
   if(useW){
     X = dat[,-1]
-    W = genmle::distnz(xvec,X)$kernW
+    #W = genmle::distnz(xvec,X)$kernW
   }else{
     W=NULL
   }
@@ -322,6 +321,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
     prop = MASS::mvrnorm(n=1,propob$mode,varprop)#make a draw from proposal dist
     lpa = posterior(prop,...); lpb = posterior(start,...)
     accprob = exp(lpa-lpb)
+    if(is.na(accprob)){accprob=0} #penalise NA fun values
     # the other part cancels out because the normal distribution is symmetric
     if(stats::runif(1)< accprob){
       Mat[i,]=prop
@@ -356,6 +356,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
       lpa = posterior(prop,...); lpb = posterior(start,...)
       accprob = exp(lpa-lpb)
       # the other part cancels out because the normal distribution is symmetric
+      if(is.na(accprob)){accprob=0} #penalise NA fun values
       if(stats::runif(1)< accprob){
         Mat[i,]=prop
         AccptRate<- AccptRate +1

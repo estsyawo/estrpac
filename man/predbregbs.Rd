@@ -4,8 +4,8 @@
 \alias{predbregbs}
 \title{Bayesian predictive distribution with best subset selection}
 \usage{
-predbregbs(dat, xvec, mods = NULL, sbset = NULL, useW = F, ndrs = NULL,
-  seed = NULL)
+predbregbs(dat, xvec, mods = NULL, sbset = NULL, useW = F,
+  ndrs = NULL, seed = NULL)
 }
 \arguments{
 \item{dat}{data frame with the first column being the dependent variable}

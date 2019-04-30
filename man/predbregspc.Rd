@@ -4,8 +4,8 @@
 \alias{predbregspc}
 \title{Bayesian predictive distribution with supervised principal components}
 \usage{
-predbregspc(dat, xvec, useW = F, ndrs = NULL, seed = NULL, lev1 = 0.1,
-  lev2 = 0.95, maxc = 3, minft = 6)
+predbregspc(dat, xvec, useW = F, ndrs = NULL, seed = NULL,
+  lev1 = 0.1, lev2 = 0.95, maxc = 3, minft = 6)
 }
 \arguments{
 \item{dat}{data frame with the first column being the dependent variable}
