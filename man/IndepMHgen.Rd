@@ -6,7 +6,7 @@
 \usage{
 indepMHgen(start = NULL, posterior = NULL, ..., propob = NULL,
   const = NULL, seed = 1, scale = 1.5, iter = 5000,
-  burn = floor(0.1 * iter), report = FALSE)
+  burn = floor(0.1 * iter), report = NULL)
 }
 \arguments{
 \item{start}{starting values of parameters for the MH algorithm.
@@ -33,7 +33,8 @@ The default is \code{1.5} but the user can adjust it until a satisfactory accept
 
 \item{burn}{burn-in period for the MH algorithm (default: floor(iter/10))}
 
-\item{report}{a logical for reporting algorithm success; default - FALSE}
+\item{report}{a numeric frequency (i.e. after how many iterations to report progress) for reporting
+algorithm progress; default - NULL}
 }
 \value{
 Matpram a matrix of parameter draws
@@ -55,7 +56,7 @@ optp<-optim(par=c(0,0),fn=logpost,control=list(fnscale=-1),hessian = TRUE)
 # laplace approximation of the posterior
 propob = list(mode=optp$par,var=-solve(optp$hessian)) #parameters of proposal distribution
 eigen(propob$var)$values # var-cov of proposal distribution is positive definite
-MHobj<- indepMHgen(posterior = logpost,propob = propob,scale = "HS18",iter = 6000)
+MHobj<- indepMHgen(posterior = logpost,propob = propob,scale = "HS18",iter = 6000,report=30)
 # create an independent Metropolis-Hastings object
 dim(MHobj$Matpram) # a 2 x 5000 matrix with columns corresponding to draws of c1 and c2
 par(mfrow=c(1,2))

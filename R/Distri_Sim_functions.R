@@ -278,7 +278,8 @@ predspcj<- function(j,dat,useW = T){
 #' The default is \code{1.5} but the user can adjust it until a satisfactory acceptance rate is obtained.
 #' @param iter number of random draws desired (default: 5000)
 #' @param burn burn-in period for the MH algorithm (default: floor(iter/10))
-#' @param report a logical for reporting algorithm success; default - FALSE
+#' @param report a numeric frequency (i.e. after how many iterations to report progress) for reporting
+#'  algorithm progress; default - NULL
 #' @return Matpram a matrix of parameter draws
 #' @return postvals vector of posterior values corresponding to parameter draws \code{Matpram}
 #' @return AcceptRatio the acceptance ratio
@@ -292,7 +293,7 @@ predspcj<- function(j,dat,useW = T){
 #' # laplace approximation of the posterior
 #' propob = list(mode=optp$par,var=-solve(optp$hessian)) #parameters of proposal distribution
 #' eigen(propob$var)$values # var-cov of proposal distribution is positive definite
-#' MHobj<- indepMHgen(posterior = logpost,propob = propob,scale = "HS18",iter = 6000)
+#' MHobj<- indepMHgen(posterior = logpost,propob = propob,scale = "HS18",iter = 6000,report=30)
 #' # create an independent Metropolis-Hastings object
 #' dim(MHobj$Matpram) # a 2 x 5000 matrix with columns corresponding to draws of c1 and c2
 #' par(mfrow=c(1,2))
@@ -304,7 +305,7 @@ predspcj<- function(j,dat,useW = T){
 
 indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
                       seed=1,scale=1.5,iter=5000,burn=floor(0.1*iter),
-                      report=FALSE){
+                      report=NULL){
   if(scale!="HS18"){
     varprop = scale*propob$var
   }else{
@@ -341,6 +342,9 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
       rx = AccptRate/i #acceptance ratio so far
       c1 = c0*(0.95 + 0.1*exp(16*(rx-0.25))/(1+exp(16*(rx-0.25))))
       c0 = c1
+    }
+    if(!is.null(report)){
+      if(i%%report==0){message(i," iterations done. ",I(iter-i)," more to go. \n")}
     }
   }
   }else{
@@ -379,9 +383,12 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
         c1 = c0*(0.95 + 0.1*exp(16*(rx-0.25))/(1+exp(16*(rx-0.25))))
         c0 = c1
       }
+      if(!is.null(report)){
+        if(i%%report==0){message(i," iterations done. ",I(iter-i)," more to go. \n")}
+      }
     }
   }
-  if(report){cat("IndepMH algorithm successful\n")}
+  if(report){message("indepMHgen algorithm successful\n")}
   val = list(Matpram=t(Mat[-c(1:burn),]),postvals=postvals[-c(1:burn)],AcceptRatio = AccptRate/iter)
   return(val)
 }
@@ -409,7 +416,8 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
 #' The default is \code{1.5} but the user can adjust it until a satisfactory acceptance rate is obtained.
 #' @param iter number of random draws desired (default: 5000)
 #' @param burn burn-in period for the MH algorithm (default: floor(0.1*iter))
-#' @param report a logical for reporting algorithm success; default - FALSE
+#' @param report a numeric frequency (i.e. after how many iterations to report progress) for reporting
+#'  algorithm progress; default - NULL
 #' @return Matpram a matrix of parameter draws
 #' @return postvals vector of posterior values corresponding to parameter draws \code{Matpram}
 #' @return AcceptRatio the acceptance ratio
@@ -423,7 +431,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
 #' # laplace approximation of the posterior
 #' propob = list(mode=optp$par,var=-solve(optp$hessian)) #parameters of proposal distribution
 #' eigen(propob$var)$values # var-cov of proposal distribution is positive definite
-#' MHobj<- rwMHgen(posterior = logpost,propob = propob,scale = "HS18",iter = 6000,report=TRUE)
+#' MHobj<- rwMHgen(posterior = logpost,propob = propob,scale = "HS18",iter = 6000,report=20)
 #' # create an independent Metropolis-Hastings object
 #' dim(MHobj$Matpram) # a 2 x 5000 matrix with columns corresponding to draws of c1 and c2
 #' par(mfrow=c(1,2))
@@ -435,7 +443,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
 
 rwMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
                       seed=1,scale=1.5,iter=5000,burn=floor(0.1*iter),
-                      report=FALSE){
+                      report=NULL){
   if(scale!="HS18"){
     varprop = scale*propob$var
   }else{
@@ -472,6 +480,9 @@ rwMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
         rx = AccptRate/i #acceptance ratio so far
         c1 = c0*(0.95 + 0.1*exp(16*(rx-0.25))/(1+exp(16*(rx-0.25))))
         c0 = c1
+      }
+      if(!is.null(report)){
+        if(i%%report==0){message(i," iterations done. ",I(iter-i)," more to go. \n")}
       }
     }
   }else{
@@ -510,9 +521,12 @@ rwMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
         c1 = c0*(0.95 + 0.1*exp(16*(rx-0.25))/(1+exp(16*(rx-0.25))))
         c0 = c1
       }
+      if(!is.null(report)){
+        if(i%%report==0){message(i," iterations done. ",I(iter-i)," more to go. \n")}
+      }
     }
   }
-  if(report){cat("IndepMH algorithm successful\n")}
+  if(report){message("rwMHgen algorithm successful\n")}
   val = list(Matpram=t(Mat[-c(1:burn),]),postvals=postvals[-c(1:burn)],AcceptRatio = AccptRate/iter)
   return(val)
 }
