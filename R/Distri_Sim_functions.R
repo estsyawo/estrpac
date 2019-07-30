@@ -298,7 +298,7 @@ predspcj<- function(j,dat,useW = T){
 #' dim(MHobj$Matpram) # a 2 x 5000 matrix with columns corresponding to draws of c1 and c2
 #' par(mfrow=c(1,2))
 #' hist(MHobj$Matpram[1,],20,main = "Histogram c1",xlab = "c1")
-#' hist(MHobj$Matpram[2,],20,main = "Histogram c2",xlab = "c2")
+#' hist(MHobj$Matpram[2,],20,main = "Histogram c2",xlab = "c2"); par(mfrow=c(1,1))
 #' MHobj$AcceptRatio # acceptance ratio
 #'
 #' @export
@@ -326,7 +326,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
     for(i in 2:iter){
     start= Mat[i-1,]
     prop = MASS::mvrnorm(n=1,propob$mode,varprop)#make a draw from proposal dist
-    lpa = posterior(prop,...); lpb = posterior(start,...)
+    lpa = posterior(prop,...); lpb = postvals[i-1]
     accprob = exp(lpa-lpb)
     if(is.na(accprob)){accprob=0} #penalise NA fun values
     # the other part cancels out because the normal distribution is symmetric
@@ -366,7 +366,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
         prop = MASS::mvrnorm(n=1,propob$mode,varprop) ; cnt<- cnt+1
         if(cnt>burn){stop("Cannot generate proposal draws within the constraint region")}
       }
-      lpa = posterior(prop,...); lpb = posterior(start,...)
+      lpa = posterior(prop,...); lpb = postvals[i-1]
       accprob = exp(lpa-lpb)
       # the other part cancels out because the normal distribution is symmetric
       if(is.na(accprob)){accprob=0} #penalise NA fun values
@@ -436,7 +436,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
 #' dim(MHobj$Matpram) # a 2 x 5000 matrix with columns corresponding to draws of c1 and c2
 #' par(mfrow=c(1,2))
 #' hist(MHobj$Matpram[1,],20,main = "Histogram c1",xlab = "c1")
-#' hist(MHobj$Matpram[2,],20,main = "Histogram c2",xlab = "c2")
+#' hist(MHobj$Matpram[2,],20,main = "Histogram c2",xlab = "c2"); par(mfrow=c(1,2))
 #' MHobj$AcceptRatio # acceptance ratio
 #'
 #' @export
@@ -464,7 +464,7 @@ rwMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
     for(i in 2:iter){
       start= Mat[i-1,]
       prop = MASS::mvrnorm(n=1,start,varprop)#make a draw from proposal dist
-      lpa = posterior(prop,...); lpb = posterior(start,...)
+      lpa = posterior(prop,...); lpb = postvals[i-1]
       accprob = exp(lpa-lpb)
       if(is.na(accprob)){accprob=0} #penalise NA fun values
       # the other part cancels out because the normal distribution is symmetric
@@ -504,7 +504,7 @@ rwMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
         prop = MASS::mvrnorm(n=1,start,varprop) ; cnt<- cnt+1
         if(cnt>burn){stop("Cannot generate proposal draws within the constraint region")}
       }
-      lpa = posterior(prop,...); lpb = posterior(start,...)
+      lpa = posterior(prop,...); lpb = postvals[i-1]
       accprob = exp(lpa-lpb)
       # the other part cancels out because the normal distribution is symmetric
       if(is.na(accprob)){accprob=0} #penalise NA fun values
