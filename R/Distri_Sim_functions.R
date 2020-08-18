@@ -388,7 +388,7 @@ indepMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
       }
     }
   }
-  if(report){message("indepMHgen algorithm successful\n")}
+  if(!is.null(report)){message("indepMHgen algorithm successful\n")}
   val = list(Matpram=t(Mat[-c(1:burn),]),postvals=postvals[-c(1:burn)],AcceptRatio = AccptRate/iter)
   return(val)
 }

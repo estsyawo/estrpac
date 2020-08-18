@@ -4,9 +4,18 @@
 \alias{indepMHgen}
 \title{A Generic Independence Metropolis-Hastings Algorithm}
 \usage{
-indepMHgen(start = NULL, posterior = NULL, ..., propob = NULL,
-  const = NULL, seed = 1, scale = 1.5, iter = 5000,
-  burn = floor(0.1 * iter), report = NULL)
+indepMHgen(
+  start = NULL,
+  posterior = NULL,
+  ...,
+  propob = NULL,
+  const = NULL,
+  seed = 1,
+  scale = 1.5,
+  iter = 5000,
+  burn = floor(0.1 * iter),
+  report = NULL
+)
 }
 \arguments{
 \item{start}{starting values of parameters for the MH algorithm.
@@ -61,7 +70,7 @@ MHobj<- indepMHgen(posterior = logpost,propob = propob,scale = "HS18",iter = 600
 dim(MHobj$Matpram) # a 2 x 5000 matrix with columns corresponding to draws of c1 and c2
 par(mfrow=c(1,2))
 hist(MHobj$Matpram[1,],20,main = "Histogram c1",xlab = "c1")
-hist(MHobj$Matpram[2,],20,main = "Histogram c2",xlab = "c2")
+hist(MHobj$Matpram[2,],20,main = "Histogram c2",xlab = "c2"); par(mfrow=c(1,1))
 MHobj$AcceptRatio # acceptance ratio
 
 }
