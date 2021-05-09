@@ -5,15 +5,12 @@ Version: 0.1.0
 Authors@R: person("Emmanuel", "Tsyawo",
                      email = "estsyawo@gmail.com",
                      role = c("aut", "cre"))
-Description: Originally, this package was created for normal bayesian predictive 
-    distributions and integrates these into portfolio decision making. For high dimensional 
-    data, one has the option of using supervised principal components for dimension reduction.
-    It has been extended to tentatively host functions that I use in my work in order to enhance
-    accessibility.
+Description: This package tentatively hosts functions that I use in my work in order to
+    enhance accessibility.
 Depends: R (>= 2.1.0)
 License: GPL-2
 Encoding: UTF-8
 LazyData: true
-Imports: MASS, sandwich, stats, invgamma, Matrix, ks, numDeriv, pracma, AER, pbapply
+Imports: MASS, sandwich, stats, AER, pbapply, energy
 RoxygenNote: 7.1.0
 
