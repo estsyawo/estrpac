@@ -15,7 +15,7 @@ mdep.nl(theta, U.fun, Z = NULL, Z.m = NULL, sc = 1)
 
 \item{Z.m}{Euclidean matrix from instrument matrix Z - optional}
 
-\item{sc}{-  adjusts the objective function - positive for minimisation, 
+\item{sc}{adjusts the objective function - positive for minimisation, 
 negative for maximisation}
 }
 \value{
@@ -29,6 +29,6 @@ for a non-linear model
 ## Generate data and run MMD regression
 n=50; set.seed(12); X = rnorm(n); Y = X + (X^2-1)/sqrt(2)
 U.fun=function(theta) Y^2-2*Y*(X*theta)-(X*theta)^2
-mdep.nl=function(1,U.fun,X)
+mdep.nl(1,U.fun,X)
 
 }

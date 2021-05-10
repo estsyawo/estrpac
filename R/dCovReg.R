@@ -9,6 +9,8 @@
 #' @param cl number of clusters to pass to \code{pbsapply()}. This is only advised in large samples.
 #' @return an IV regression object which also contains coefficients, standard errors, etc.
 #' 
+#' @importFrom stats dist
+#' 
 #' @examples 
 #' ## Generate data and run MMD regression
 #' n=200; set.seed(12); X = rnorm(n); er = rchisq(n,df=1)-1; Z=X; X=scale(abs(X))+er/sqrt(2)
@@ -51,6 +53,8 @@ mmdreg = function(Y,X,Z=X,cl=NULL){
 #' @param Z the possibly conditioning multivariate variable
 #' @return the MDD coefficient
 #' 
+#' @importFrom stats dist
+#' 
 #' @examples 
 #' set.seed(12); X = rnorm(200); MDD(X,X^2/sqrt(2))
 #' set.seed(12); Y = rchisq(200,1)/sqrt(2); MDD(Y,X)
@@ -81,6 +85,8 @@ MDD<- function(U,Z){
 #' @param cluster vector of length n with cluster ids if cluster-robust wild-bootstrap is
 #'  used
 #' @return an n by B matrix of two-point weights
+#' 
+#' @export
 
 wmat.mammen<- function(n,B=200,seed=NULL,cluster=NULL){ 
   if(!is.null(seed)) {set.seed(seed = seed)}
@@ -118,15 +124,15 @@ wmat.mammen<- function(n,B=200,seed=NULL,cluster=NULL){
 #' ## Generate data and run MMD regression
 #' n=200; set.seed(12); X = rnorm(n); er = rchisq(n,df=1)-1; Z=X; X=scale(abs(X))+er/sqrt(2)
 #' Y=X+er; reg1 = mmdreg(Y,X,Z); reg2 = mmdreg(Y,X,X) #run regression
-#' mmd.lmspec_test(reg1); mmd.lmspec_test(reg2) #test under the null and the alternative
+#' mmd.lmspec_test(reg1,B=99); mmd.lmspec_test(reg2,B=99) #test under the null and the alternative
 #' ## MMD coefficients, standard errors, and t-statistics
 #' 
 #' @export
 
 mmd.lmspec_test<- function(mmd.Obj,B=199,wmat=NULL,cl=NULL,cluster=NULL){#returns p-value
-  X = mmd.Obj$model[[2]]; k = ncol(X)
+  X = mmd.Obj$model[[2]]; k = ncol(X); n = nrow(X)
   Tn_SZo = MDD(mmd.Obj$residuals,Z=mmd.Obj$MMD_Zm)
-  if(is.null(wmat)){wmat = bayesprdopt:::wmat.mammen(n=n,B=B,seed = n,cluster=cluster)}
+  if(is.null(wmat)){wmat = wmat.mammen(n=n,B=B,seed = n,cluster=cluster)}
   
   fn<- function(j){
     Ystar = mmd.Obj$fitted.values + sqrt(n/(n-k-1))*mmd.Obj$residuals*wmat[,j]
@@ -145,9 +151,11 @@ mmd.lmspec_test<- function(mmd.Obj,B=199,wmat=NULL,cl=NULL,cluster=NULL){#return
 #' @param U.fun user-written function of the disturbance function; evaluates to an n x 1 vector
 #' @param Z n x pz matrix of instruments; should be supplied in case Z.m is null
 #' @param Z.m Euclidean matrix from instrument matrix Z - optional
-#' @param sc -  adjusts the objective function - positive for minimisation, 
+#' @param sc adjusts the objective function - positive for minimisation, 
 #' negative for maximisation
 #' @return function value
+#' 
+#' @importFrom stats dist
 #' 
 #' @examples 
 #' ## Generate data and run MMD regression
@@ -158,7 +166,7 @@ mmd.lmspec_test<- function(mmd.Obj,B=199,wmat=NULL,cl=NULL,cluster=NULL){#return
 #' @export
 
 mdep.nl=function(theta,U.fun,Z=NULL,Z.m=NULL,sc=1){
-  if(is.null(Z.m)){Z.m = c(lower.tri(energy::U_center(as.matrix(dist(Z)))))}
+  if(is.null(Z.m)){Mat=energy::U_center(as.matrix(stats::dist(Z)));Z.m = c(Mat[lower.tri(Mat)])}
   sc*mean(c(dist(U.fun(theta)))*Z.m)
 }
 

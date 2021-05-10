@@ -29,7 +29,7 @@ estimated with the MMD estimator.
 ## Generate data and run MMD regression
 n=200; set.seed(12); X = rnorm(n); er = rchisq(n,df=1)-1; Z=X; X=scale(abs(X))+er/sqrt(2)
 Y=X+er; reg1 = mmdreg(Y,X,Z); reg2 = mmdreg(Y,X,X) #run regression
-mmd.lmspec_test(reg1); mmd.lmspec_test(reg2) #test under the null and the alternative
+mmd.lmspec_test(reg1,B=99); mmd.lmspec_test(reg2,B=99) #test under the null and the alternative
 ## MMD coefficients, standard errors, and t-statistics
 
 }
