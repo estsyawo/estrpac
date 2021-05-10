@@ -150,7 +150,7 @@ mmd.lmspec_test<- function(mmd.Obj,B=199,wmat=NULL,cl=NULL,cluster=NULL){#return
 #' @param theta parameter vector
 #' @param U.fun user-written function of the disturbance function; evaluates to an n x 1 vector
 #' @param Z n x pz matrix of instruments; should be supplied in case Z.m is null
-#' @param Z.m Euclidean matrix from instrument matrix Z - optional
+#' @param Z.m D- or U-centred Euclidean matrix from instrument matrix Z - optional
 #' @param sc adjusts the objective function - positive for minimisation, 
 #' negative for maximisation
 #' @return function value
@@ -170,15 +170,33 @@ mdep.nl=function(theta,U.fun,Z=NULL,Z.m=NULL,sc=1){
   sc*mean(c(dist(U.fun(theta)))*Z.m)
 }
 
-# Function to compute the objective function of the MMD estimator for a non-linear model
-# theta - parameter vector
-# U.fun - a function of theta to evaluate the n x 1 vector of disturbances
-# Z.m - Euclidean matrix - optional
-# Z - n x pz matrix of instruments
-# sc -  adjusts the objective function - positive for minimisation, negative for maximisation
-# mmd.nl=function(theta,U.fun,Z.m=NULL,Z=NULL,sc=1){
-#   if(is.null(Z.m)){Z.m = c(dist(Z)))}
-#   U = U.fun(theta); U=U-mean(U); 
-#   sc*mean(c(lower.tri(tcrossprod(U)))*Z.m)
-# }
+#==========================================================================================>
+#' MMD objective function for non-linear models
+#'
+#' \code{mmd.nl} computes the objective function of the MMD estimator 
+#' for a non-linear model
+#'
+#' @param theta parameter vector
+#' @param U.fun user-written function of the disturbance function; evaluates to an n x 1 vector
+#' @param Z n x pz matrix of instruments; should be supplied in case Z.m is null
+#' @param Z.m Euclidean matrix from instrument matrix Z - optional
+#' @param sc adjusts the objective function - positive for minimisation, 
+#' negative for maximisation
+#' @return function value
+#' 
+#' @importFrom stats dist
+#' 
+#' @examples 
+#' ## Generate data and run MMD regression
+#' n=50; set.seed(12); X = rnorm(n); Y = X + (X^2-1)/sqrt(2)
+#' U.fun=function(theta) Y^2-2*Y*(X*theta)-(X*theta)^2
+#' mmd.nl(1,U.fun,Z=X)
+#' 
+#' @export
+
+mmd.nl=function(theta,U.fun,Z=NULL,Z.m=NULL,sc=1){
+  if(is.null(Z.m)){Z.m = c(dist(Z))}
+  U = U.fun(theta); U=U-mean(U); U.m = tcrossprod(U)
+  -sc*mean(c(U.m[lower.tri(U.m)])*Z.m)
+}
 
