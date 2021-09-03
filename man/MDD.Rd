@@ -9,7 +9,7 @@ MDD(U, Z)
 \arguments{
 \item{U}{the univariate variable}
 
-\item{Z}{the possibly conditioning multivariate variable}
+\item{Z}{the possibly multivariate conditioning variable}
 }
 \value{
 the MDD coefficient
@@ -19,6 +19,5 @@ the MDD coefficient
 possibly multivariate Z. The MDD measures the mean dependence of U on Z.
 }
 \examples{
-set.seed(12); X = rnorm(200); MDD(X,X^2/sqrt(2))
-set.seed(12); Y = rchisq(200,1)/sqrt(2); MDD(Y,X)
+set.seed(12); X = rnorm(200); MDD(X,abs(X)); MDD(abs(X),X)
 }

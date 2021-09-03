@@ -16,10 +16,11 @@ mmdreg(Y, X, Z = X, cl = NULL)
 \item{cl}{number of clusters to pass to \code{pbsapply()}. This is only advised in large samples.}
 }
 \value{
-an IV regression object which also contains coefficients, standard errors, etc.
+an IV regression object which also contains coefficients, standard errors, etc. The
+standard errors are computed based on a U-Statistics characterisation of the influence function
 }
 \description{
-\code{mmdreg} is runs a linear minimum mean dependence (MMD) regression.
+\code{mmdreg} runs a linear minimum mean dependence (MMD) regression.
 }
 \examples{
 ## Generate data and run MMD regression
