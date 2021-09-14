@@ -38,7 +38,7 @@ the p-value, test statistic,
 estimated with the MMD estimator. It is based on the wild bootstrap.
 }
 \examples{
-n=200; set.seed(12); X = rnorm(n); er = (rchisq(n,df=1)-1)/sqrt(2)
+n=100; set.seed(12); X = rnorm(n); er = (rchisq(n,df=1)-1)/sqrt(2)
 X1=(X+er)/sqrt(2);mmdlmrelv.b_test(X1,abs(X),X^3);mmdlmrelv.b_test(X1,X,X^3)
 
 }

@@ -4,15 +4,19 @@
 \alias{Kern.fun}
 \title{Construction of n x n Kernel Matrices}
 \usage{
-Kern.fun(Z, Kern = "Euclid")
+Kern.fun(Z, Kern = "Euclid", D = NULL, Y = NULL)
 }
 \arguments{
 \item{Z}{n x p matrix of instrumental variables}
 
 \item{Kern}{type of kernel desired.}
+
+\item{D}{matrix of endogenous covariates. Ought to be demeaned.}
+
+\item{Y}{the outcome variable. Ought to be demeaned.}
 }
 \value{
-the MDD coefficient
+the \eqn{n\times n} kernel matrix
 }
 \description{
 \code{Kern.fun} computes the n x n matrix of kernels used in the integrated moment class
@@ -25,6 +29,7 @@ The \eqn{(i,j)}'th elements of available kernel methods are
 \item{"Gauss.W"}{The weighted Gaussian kernel: exp(-0.5(Z_i-Z_j)'V^{-1}(Z_i-Z_j)) where V is the variance of V} 
 \item{"Gauss"}{The unweighted Gaussian kernel: exp(-||Z_i-Z_j||^2)}
 \item{"DL"}{The kernel of Dominguez & Lobato 2004: \eqn{1/n\sum{l=1}^n I(Z_i\le Z_l)I(Z_j\le Z_l)}}
+\item{"WMD"}{The kernel used in Antoine & Lavergne 2014. See page 60 of paper.}
 }
 }
 \examples{

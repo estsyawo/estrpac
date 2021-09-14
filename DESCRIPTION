@@ -1,16 +1,16 @@
-Package: bayesprdopt
+Package: estrpac
 Type: Package
-Title: Bayesian Prediction and portfolio optimization
+Title: Useful Functions and Algorithms
 Version: 0.1.0
 Authors@R: person("Emmanuel", "Tsyawo",
                      email = "estsyawo@gmail.com",
                      role = c("aut", "cre"))
-Description: This package tentatively hosts functions that I use in my work in order to
-    enhance accessibility.
+Description: This package tentatively hosts functions that I use in my work for
+    enhanced accessibility.
 Depends: R (>= 2.1.0)
 License: GPL-2
 Encoding: UTF-8
 LazyData: true
-Imports: MASS, sandwich, stats, AER, pbapply, energy
+Imports: MASS, sandwich, stats, AER, pbapply, energy, expm
 RoxygenNote: 7.1.0
 

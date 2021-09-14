@@ -7,7 +7,7 @@
 mmdlmspec.b_test(mmd.Obj, B = 199, wmat = NULL, cl = NULL, cluster = NULL)
 }
 \arguments{
-\item{mmd.Obj}{is an MMD regression output from mmdreg()}
+\item{mmd.Obj}{is an MMD regression output from mmdreg.fit()}
 
 \item{B}{number of wild bootstrap samples. Defaults to 199}
 
@@ -27,8 +27,8 @@ estimated with the MMD estimator. It is based on the wild bootstrap.
 }
 \examples{
 ## Generate data and run MMD regression
-n=200; set.seed(12); X = rnorm(n); er = rchisq(n,df=1)-1; Z=X; X=scale(abs(X))+er/sqrt(2)
-Y=X+er; reg1 = mmdreg(Y,X,Z); reg2 = mmdreg(Y,X,X) #run regression
+n=100; set.seed(12); X = rnorm(n); er = rchisq(n,df=1)-1; Z=X; X=scale(abs(X))+er/sqrt(2)
+Y=X+er; reg1 = mmdreg.fit(Y,X,Z); reg2 = mmdreg.fit(Y,X,X) #run regression
 mmdlmspec.b_test(reg1); mmdlmspec.b_test(reg2) #test under the null and the alternative
 ## MMD coefficients, standard errors, and t-statistics
 

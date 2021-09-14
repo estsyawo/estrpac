@@ -1,7 +1,7 @@
 #==========================================================================================>
 #' MMD Regression
 #'
-#' \code{mmdreg} runs a linear minimum mean dependence (MMD) regression.
+#' \code{mmdreg.fit} runs a linear minimum mean dependence (MMD) regression.
 #'
 #' @param Y outcome variable
 #' @param X matrix of covariates.
@@ -16,13 +16,14 @@
 #' ## Generate data and run MMD regression
 #' n=200; set.seed(12); X = rnorm(n); er = rchisq(n,df=1)-1; Z=X; X=scale(abs(X))+er/sqrt(2)
 #' Y=X+er
-#' reg = mmdreg(Y,X,Z) #run regression
+#' reg = mmdreg.fit(Y,X,Z) #run regression
 #' ## MMD coefficients, standard errors, and t-statistics
 #' reg$MMD_coefficients; reg$MMD_SE; reg$MMD_tstat
 #' @export
 
-mmdreg = function(Y,X,Z=X,cl=NULL){
-  YY = Y - mean(Y);XX=X=as.matrix(X); for (k in 1:ncol(XX)){XX[,k]=X[,k]-mean(X[,k])}; n = length(Y)
+mmdreg.fit = function(Y,X,Z=X,cl=NULL){
+  YY = Y - mean(Y);XX=X=as.matrix(X); 
+  for (k in 1:ncol(XX)){XX[,k]=X[,k]-mean(X[,k])}; n = length(Y)
   #in case Z is already a Euclidean distance matrix
   Z = as.matrix(Z)
   if(!(ncol(Z)==nrow(Z))){Mz = as.matrix(dist(Z))}else{Mz=Z}
@@ -46,13 +47,15 @@ mmdreg = function(Y,X,Z=X,cl=NULL){
 
 
 #==========================================================================================>
-#' MMD Regression
+#' Generic Linear Integrated Moment Regression
 #'
-#' \code{imreg} runs a linear integrated moment regression.
+#' \code{imlmreg.fit} runs a generic linear integrated moment regression allowing for different
+#' kernels. 
 #'
 #' @param Y outcome variable
-#' @param X matrix of covariates.
-#' @param Z matrix of instruments. Defaults to \code{X}.
+#' @param D matrix of endogenous covariates
+#' @param X matrix of exogenous covariates.
+#' @param Z matrix of instruments
 #' @param Kern type of kernel. See \code{\link{Kern.fun}} for available kernels
 #' @return an IV regression object which also contains coefficients, standard errors, etc.
 #' 
@@ -62,18 +65,71 @@ mmdreg = function(Y,X,Z=X,cl=NULL){
 #' 
 #' @examples 
 #' ## Generate data and run MMD regression
-#' n=200; set.seed(12); X = rnorm(n); er = rchisq(n,df=1)-1; Z=X; X=scale(abs(X))+er/sqrt(2)
-#' Y=X+er
-#' reg = imlmreg(Y,X,Z) #run regression
-#' AER::ivreg(formula = Y ~ X | Z) #compare to conventional IV regression
+#' n=200; set.seed(12); D = rnorm(n); er = rchisq(n,df=1)-1; Z=D
+#' D=scale(abs(D))+er/sqrt(2); Y=D+er
+#' summary(imlmreg.fit(Y=Y,D=D,Z=Z))
+#' summary(AER::ivreg(formula = Y ~ D | Z)) #compare to conventional IV regression
 #' @export
 
-imlmreg = function(Y,X,Z=X,Kern="Euclid"){
-  YY = Y - mean(Y);XX=X=as.matrix(X); for (k in 1:ncol(XX)){XX[,k]=X[,k]-mean(X[,k])}; n = length(Y)
+imlmreg.fit = function(Y,D,X=NULL,Z,Kern="Euclid"){
+  YY = Y - mean(Y);XX=as.matrix(cbind(D,X))
+  for (k in 1:ncol(XX)){XX[,k]=XX[,k]-mean(XX[,k])}; n = length(Y)
   Z = as.matrix(Z) #in case Z is already a Euclidean distance matrix
-  if(!(ncol(Z)==nrow(Z)&isSymmetric(Z))){Mz = Kern.fun(Z,Kern)}else{Mz=Z}
+  if(!(ncol(Z)==nrow(Z)&isSymmetric(Z))){Mz = Kern.fun(Z,Kern,D-mean(D),YY)}else{Mz=Z}
   Zhat = Mz%*%XX/n
   obj=AER::ivreg(YY~as.matrix(XX)|as.matrix(Zhat))
+  obj$vcovHC=sandwich::vcovHC(obj)
+  obj$HC_Std.Err=sqrt(diag(obj$vcovHC))
+  obj
+}
+#==========================================================================================>
+#' Generic k-class estimator
+#'
+#' \code{kClassIVreg.fit} runs a generic linear IV model of the k-Class
+#'
+#' @param Y outcome variable
+#' @param D matrix of endogenous covariates
+#' @param X matrix of exogenous covariates.
+#' @param Z matrix of instruments. Defaults to \code{X}.
+#' @param method method of the k-class to implement. Defaults to "JIVE".
+#' @return an IV regression object which also contains coefficients, standard errors, etc.
+#' @details Available methods in the k-Class include
+#' \describe{
+#' \item{"JIVE"}{The Jackknife IV of Angrist et al. 1999} 
+#' \item{"LIML"}{Limited Maximum Likelihood} 
+#' \item{"HLIM"}{The Jackknife Limited Maximum Likelihood of Hausman et al. 2012}
+#' }
+
+#' @importFrom sandwich vcovHC
+#' @importFrom AER ivreg
+#' @importFrom expm sqrtm
+#' 
+#' @examples 
+#' ## Generate data and run MMD regression
+#' n=200; set.seed(12); D = rnorm(n); er = rchisq(n,df=1)-1; Z=D 
+#' Z=cbind(Z,Z^2,Z^3,Z^4);D=scale(abs(D))+er/sqrt(2); Y=D+er
+#' summary(kClassIVreg.fit(Y=Y,D=D,Z=Z))
+#' summary(AER::ivreg(formula = Y ~ D | Z)) #compare to conventional IV regression
+#' @export
+
+kClassIVreg.fit = function(Y,D,X=NULL,Z,method="JIVE"){
+  n=length(Y);Z = as.matrix(Z) #in case Z is already an appropriate kernel matrix
+  X=as.matrix(cbind(D,X)) #the design matrix
+  
+  if(!(ncol(Z)==nrow(Z)&isSymmetric(Z))){
+    Mz = Z%*%solve(crossprod(Z))%*%t(Z)
+    if(method=="JIVE"){diag(Mz)=0 #Jackknife IV
+    }else if(method=="LIML"){#Limited Information Maximum Likelihood
+      Ystar = as.matrix(cbind(Y,1,D)); YSinv=sqrtm(solve(crossprod(Ystar)))
+      diag(Mz)=diag(Mz)-min(eigen(YSinv%*%(crossprod(Ystar,Mz)%*%Ystar)%*%YSinv)$values)
+    }else if(method=="HLIM"){
+      Ystar = as.matrix(cbind(Y,1,D)); YSinv=sqrtm(solve(crossprod(Ystar)))
+      diag(Mz)=-min(eigen(YSinv%*%(crossprod(Ystar,Mz)%*%Ystar)%*%YSinv)$values)
+    }else{stop("The method ",method," is unavailable.\n")}
+  }else{Mz=Z}
+  
+  Zhat = Mz%*%X/n
+  obj=AER::ivreg(Y~X|as.matrix(Zhat))
   obj$vcovHC=sandwich::vcovHC(obj)
   obj$HC_Std.Err=sqrt(diag(obj$vcovHC))
   obj
@@ -117,23 +173,24 @@ MDD<- function(U,Z){
 #' 
 #' @param Z n x p matrix of instrumental variables
 #' @param Kern type of kernel desired. 
+#' @param D matrix of endogenous covariates. Ought to be demeaned.
+#' @param Y the outcome variable. Ought to be demeaned.
 #' @details The \eqn{(i,j)}'th elements of available kernel methods are
 #' \describe{
 #' \item{"Euclid"}{Euclidean distance between two vectors: ||Z_i-Z_j||} 
 #' \item{"Gauss.W"}{The weighted Gaussian kernel: exp(-0.5(Z_i-Z_j)'V^{-1}(Z_i-Z_j)) where V is the variance of V} 
 #' \item{"Gauss"}{The unweighted Gaussian kernel: exp(-||Z_i-Z_j||^2)}
 #' \item{"DL"}{The kernel of Dominguez & Lobato 2004: \eqn{1/n\sum{l=1}^n I(Z_i\le Z_l)I(Z_j\le Z_l)}}
+#' \item{"WMD"}{The kernel used in Antoine & Lavergne 2014. See page 60 of paper.}
 #' }
 #'  
-#' @return the MDD coefficient
-#' 
-#' @importFrom stats dist
-#' @importFrom expm sqrtm
+#' @return the \eqn{n\times n} kernel matrix
+#' @importFrom stats dist cov
 #' 
 #' @examples 
 #' set.seed(12); X = rnorm(5); Z=cbind(X,abs(X)); Kern.fun(Z,"DL")
 #' @export
-Kern.fun = function(Z,Kern="Euclid"){
+Kern.fun = function(Z,Kern="Euclid",D=NULL,Y=NULL){
   Z=as.matrix(Z); n = nrow(Z)
   if(Kern=="Euclid"){Omg=as.matrix(dist(Z))}
   else if(Kern=="Gauss.W"){
@@ -146,7 +203,20 @@ Kern.fun = function(Z,Kern="Euclid"){
       sub.fn(1:nrow(Z))}#end function fn
     for(i in 1:n){Om[i,]=fn(i)}
     for(i in 1:n){for(j in 1:i){Omg[i,j]=mean(Om[i,]*Om[,j]);Omg[j,i]=Omg[i,j]}}
-  }else{stop(cat("The method ",Kern," is not available."))}
+  }else if(Kern=="WMD"){
+    if(is.null(D)&is.null(Y)){stop("This method requires that both D and Y be specified.")}
+    Omg=(1/sqrt(2*pi))^ncol(Z)*exp(-0.5*as.matrix(dist(scale(Z)))^2)
+    diag(Omg)=0;
+    YX = as.matrix(cbind(Y,D)); YSinv=sqrtm(solve(crossprod(YX)))
+    diag(Omg)=-min(eigen(YSinv%*%(crossprod(YX,Omg)%*%YX)%*%YSinv)$values)
+  }
+  # else if(Kern=="HMMD"){
+  #   if(is.null(D)&is.null(Y)){stop("This method requires that both X and Y be specified.")}
+  #   Omg=as.matrix(dist(Z))
+  #   YX = as.matrix(cbind(Y,D)); YSinv=sqrtm(solve(crossprod(YX)))
+  #   diag(Omg)=-min(eigen(YSinv%*%(crossprod(YX,Omg)%*%YX)%*%YSinv)$values)
+  # }
+  else{stop("The method ",Kern," is not available.")}
   return(Omg)
 }
 
@@ -217,7 +287,7 @@ wmat.mammen<- function(n,B=200,seed=NULL,cluster=NULL){
 #' \code{mmdlmspec.b_test} conducts the Su \& Zheng 2017 specification test on a linear model
 #' estimated with the MMD estimator. It is based on the wild bootstrap.
 #'
-#' @param mmd.Obj is an MMD regression output from mmdreg()
+#' @param mmd.Obj is an MMD regression output from mmdreg.fit()
 #' @param B number of wild bootstrap samples. Defaults to 199
 #' @param wmat in case the n x B matrix of wild bootstrap weights are supplied by the user.
 #' @param cl an integer to indicate number of child-processes in pbapply::pbsapply().
@@ -227,8 +297,8 @@ wmat.mammen<- function(n,B=200,seed=NULL,cluster=NULL){
 #' 
 #' @examples 
 #' ## Generate data and run MMD regression
-#' n=200; set.seed(12); X = rnorm(n); er = rchisq(n,df=1)-1; Z=X; X=scale(abs(X))+er/sqrt(2)
-#' Y=X+er; reg1 = mmdreg(Y,X,Z); reg2 = mmdreg(Y,X,X) #run regression
+#' n=100; set.seed(12); X = rnorm(n); er = rchisq(n,df=1)-1; Z=X; X=scale(abs(X))+er/sqrt(2)
+#' Y=X+er; reg1 = mmdreg.fit(Y,X,Z); reg2 = mmdreg.fit(Y,X,X) #run regression
 #' mmdlmspec.b_test(reg1); mmdlmspec.b_test(reg2) #test under the null and the alternative
 #' ## MMD coefficients, standard errors, and t-statistics
 #' 
@@ -241,7 +311,7 @@ mmdlmspec.b_test<- function(mmd.Obj,B=199,wmat=NULL,cl=NULL,cluster=NULL){#retur
   
   fn<- function(j){
     Ystar = mmd.Obj$fitted.values + sqrt(n/(n-k-1))*mmd.Obj$residuals*wmat[,j]
-    n*MDD(mmdreg(Ystar,X=X,Z=mmd.Obj$MMD_Zm)$residuals,mmd.Obj$MMD_Zm)
+    n*MDD(mmdreg.fit(Ystar,X=X,Z=mmd.Obj$MMD_Zm)$residuals,mmd.Obj$MMD_Zm)
   }
   if(is.null(cl)){TnSZ_boot=sapply(1:B,fn)}else{TnSZ_boot=pbapply::pbsapply(1:B,fn,cl=cl)}
   list(statistic=Tn_SZo,p.value=mean(TnSZ_boot>Tn_SZo))
@@ -266,7 +336,7 @@ mmdlmspec.b_test<- function(mmd.Obj,B=199,wmat=NULL,cl=NULL,cluster=NULL){#retur
 #' @return the p-value, test statistic, 
 #' 
 #' @examples 
-#' n=200; set.seed(12); X = rnorm(n); er = (rchisq(n,df=1)-1)/sqrt(2)
+#' n=100; set.seed(12); X = rnorm(n); er = (rchisq(n,df=1)-1)/sqrt(2)
 #' X1=(X+er)/sqrt(2);mmdlmrelv.b_test(X1,abs(X),X^3);mmdlmrelv.b_test(X1,X,X^3)
 #' 
 #' @export
@@ -275,7 +345,7 @@ mmdlmrelv.b_test<- function(X1,X2=NULL,Z,B=199,wmat=NULL,cl=NULL,cluster=NULL){
   X1=as.matrix(X1); p1 = ncol(X1)
   if(p1==1){
     if(!is.null(X2)){X2=as.matrix(X2) #exogenous covariates
-    mmd.Obj = mmdreg(X1,X2,Z)
+    mmd.Obj = mmdreg.fit(X1,X2,Z)
     ans=mmdlmspec.b_test(mmd.Obj,B=B,wmat=wmat,cl=cl,cluster=cluster)
     }else{#no exogenous covariates
       ans=mddtest.boot(X1,Z,B=B,wmat=wmat,cl=cl,cluster=cluster)
@@ -440,7 +510,7 @@ mddtest.perm<- function(U,V,B=199,PBmat=NULL,cl=NULL){
 
 mdd.t_test=function(Y,Z){
   Z = as.matrix(Z); Y=scale(Y); X = Y + apply(Z,1,mean); X=scale(X) #elicit an endogenous X
-  MMDobj=mmdreg(Y,X,Z)
+  MMDobj=mmdreg.fit(Y,X,Z)
   SE_MMD = sqrt(MMDobj$MMD_VC); obj=list()
   Tstat=MMDobj$coefficients[-1]/SE_MMD
   obj$statistic=c(Tstat); obj$stderr=c(SE_MMD)
