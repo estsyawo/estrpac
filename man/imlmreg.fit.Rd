@@ -4,18 +4,18 @@
 \alias{imlmreg.fit}
 \title{Generic Linear Integrated Moment Regression}
 \usage{
-imlmreg.fit(Y, D, X = NULL, Z, Kern = "Euclid")
+imlmreg.fit(Y, X, Z, Kern = "Euclid", vctype = "HC3")
 }
 \arguments{
 \item{Y}{outcome variable}
 
-\item{D}{matrix of endogenous covariates}
-
-\item{X}{matrix of exogenous covariates.}
+\item{X}{matrix of covariates.}
 
 \item{Z}{matrix of instruments}
 
-\item{Kern}{type of kernel. See \code{\link{Kern.fun}} for available kernels}
+\item{Kern}{type of kernel. See Details for available kernels}
+
+\item{vctype}{type of sandwich covariance matrix (see \link[sandwich]{vcovHC})}
 }
 \value{
 an IV regression object which also contains coefficients, standard errors, etc.
@@ -24,10 +24,22 @@ an IV regression object which also contains coefficients, standard errors, etc.
 \code{imlmreg.fit} runs a generic linear integrated moment regression allowing for different
 kernels.
 }
+\details{
+The \eqn{(i,j)}'th elements of available kernel methods are
+\describe{
+\item{"Euclid"}{Euclidean distance between two vectors: ||Z_i-Z_j||} 
+\item{"Gauss.W"}{The weighted Gaussian kernel: exp(-0.5(Z_i-Z_j)'V^{-1}(Z_i-Z_j)) where V is the variance of V} 
+\item{"Gauss"}{The unweighted Gaussian kernel: exp(-||Z_i-Z_j||^2)}
+\item{"DL"}{The kernel of Dominguez & Lobato 2004: \eqn{1/n\sum{l=1}^n I(Z_i\le Z_l)I(Z_j\le Z_l)}}
+\item{"Esc6"}{The projected version of the DL in Escanciano 2006.}
+\item{"WMD"}{The kernel used in Antoine & Lavergne 2014. See page 60 of paper.}
+\item{"WMDF"}{The Fuller (1977)-like modification of the kernel in Antoine & Lavergne 2014. See page 64 of paper.}
+}
+}
 \examples{
 ## Generate data and run MMD regression
-n=200; set.seed(12); D = rnorm(n); er = rchisq(n,df=1)-1; Z=D
-D=scale(abs(D))+er/sqrt(2); Y=D+er
-summary(imlmreg.fit(Y=Y,D=D,Z=Z))
-summary(AER::ivreg(formula = Y ~ D | Z)) #compare to conventional IV regression
+n=200; set.seed(12); X = rnorm(n); er = (rchisq(n,df=1)-1)/sqrt(2); Z=X
+X=scale(abs(X))+er/sqrt(2); Y=X+er
+summary(imlmreg.fit(Y=Y,X=X,Z=Z))
+summary(AER::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
 }

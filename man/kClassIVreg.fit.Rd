@@ -4,14 +4,12 @@
 \alias{kClassIVreg.fit}
 \title{Generic k-class estimator}
 \usage{
-kClassIVreg.fit(Y, D, X = NULL, Z, method = "JIVE")
+kClassIVreg.fit(Y, X, Z, method = "JIVE")
 }
 \arguments{
 \item{Y}{outcome variable}
 
-\item{D}{matrix of endogenous covariates}
-
-\item{X}{matrix of exogenous covariates.}
+\item{X}{matrix of covariates.}
 
 \item{Z}{matrix of instruments. Defaults to \code{X}.}
 
@@ -29,12 +27,13 @@ Available methods in the k-Class include
 \item{"JIVE"}{The Jackknife IV of Angrist et al. 1999} 
 \item{"LIML"}{Limited Maximum Likelihood} 
 \item{"HLIM"}{The Jackknife Limited Maximum Likelihood of Hausman et al. 2012}
+\item{"HFUL"}{The heteroskedasticity robust version of the Fuller (1977) estimator}
 }
 }
 \examples{
 ## Generate data and run MMD regression
-n=200; set.seed(12); D = rnorm(n); er = rchisq(n,df=1)-1; Z=D 
-Z=cbind(Z,Z^2,Z^3,Z^4);D=scale(abs(D))+er/sqrt(2); Y=D+er
-summary(kClassIVreg.fit(Y=Y,D=D,Z=Z))
-summary(AER::ivreg(formula = Y ~ D | Z)) #compare to conventional IV regression
+n=200; set.seed(12); X = rnorm(n); er = rchisq(n,df=1)-1; Z=X 
+Z=cbind(Z,Z^2,Z^3,Z^4);X=scale(abs(X))+er/sqrt(2); Y=X+er
+summary(kClassIVreg.fit(Y=Y,X=X,Z=Z))
+summary(AER::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
 }
