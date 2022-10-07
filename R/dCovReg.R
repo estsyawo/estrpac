@@ -95,6 +95,71 @@ imlmreg.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
   class(obj)=c(class(obj),"ICM",Kern)
   obj
 }
+
+#==========================================================================================>
+#' Generic Linear Integrated Moment Regression
+#'
+#' \code{imlmreg2.fit} runs a generic linear integrated moment regression allowing for different
+#' kernels. This variant uses centred instruments in the meat of the sandwich matrix
+#'
+#' @param Y outcome variable
+#' @param X matrix of covariates.
+#' @param Z matrix of instruments
+#' @param Kern type of kernel. See Details for available kernels
+#' @param vctype type of sandwich covariance matrix (see \link[sandwich]{vcovHC})
+#'
+#' @details The \eqn{(i,j)}'th elements of available kernel methods are
+#' \describe{
+#' \item{"Euclid"}{Euclidean distance between two vectors: ||Z_i-Z_j||}
+#' \item{"Gauss.W"}{The weighted Gaussian kernel: exp(-0.5(Z_i-Z_j)'V^{-1}(Z_i-Z_j)) where V is the variance of V}
+#' \item{"Gauss"}{The unweighted Gaussian kernel: exp(-||Z_i-Z_j||^2)}
+#' \item{"DL"}{The kernel of Dominguez & Lobato 2004: \eqn{1/n\sum{l=1}^n I(Z_i\le Z_l)I(Z_j\le Z_l)}}
+#' \item{"Esc6"}{The projected version of the DL in Escanciano 2006.}
+#' \item{"WMD"}{The kernel used in Antoine & Lavergne 2014. See page 60 of paper.}
+#' \item{"WMDF"}{The Fuller (1977)-like modification of the kernel in Antoine & Lavergne 2014. See page 64 of paper.}
+#' }
+#'
+#' @return an IV regression object which also contains coefficients, standard errors, etc.
+#'
+#' @importFrom stats dist
+#' @importFrom sandwich vcovHC
+#' @importFrom AER ivreg
+#'
+#' @examples
+#' ## Generate data and run MMD regression
+#' n=200; set.seed(12); X = rnorm(n); er = (rchisq(n,df=1)-1)/sqrt(2); Z=X
+#' X=scale(abs(X))+er/sqrt(2); Y=X+er
+#' summary(imlmreg2.fit(Y=Y,X=X,Z=Z))
+#' summary(AER::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
+#' @export
+
+imlmreg2.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
+  Y = Y# - mean(Y); 
+  X=as.matrix(cbind(1,X)) #centering at the mean
+  #for (k in 1:ncol(X)){X[,k]=X[,k]-mean(X[,k])}; 
+  n = length(Y)
+  Z = as.matrix(Z) #in case Z is already a Euclidean distance matrix
+  Mz = Kern.fun(Z,Kern,X[,-1],Y)
+  Zhat = Mz%*%X/(n-1)
+  #Aninv=solve(crossprod(Zhat,X)/n)
+  obj=AER::ivreg(Y~as.matrix(X[,-1])|as.matrix(Zhat[,-1]),x=TRUE)
+  # #for (k in 1:ncol(Zhat)){Zhat[,k] = Zhat[,k]-mean(Zhat[,k])} #centre the constructed instruments
+  # Bn = crossprod(Zhat*c(obj$residuals))/n +
+  #   mean(obj$residuals^2)*tcrossprod(c(apply(Zhat,2,mean))) #small adjustment for centring
+  # vcovHC=Aninv%*%Bn%*%Aninv/obj$df.residual
+  # obj$HC_Std.Err=sqrt(diag(vcovHC)); obj$vcovHC=vcovHC
+  # obj$Z=Z; obj$XX=X; obj$YY=Y
+  # class(obj)=c(class(obj),"ICM",Kern)
+  # obj
+  obj$Z=Z
+  obj$vcovHC=sandwich::vcovHC(obj,type=vctype)
+  obj$HC_Std.Err=sqrt(diag(obj$vcovHC))
+  class(obj)=c(class(obj),"ICM",Kern)
+  obj
+}
+#==========================================================================================>
+
+
 #==========================================================================================>
 #' Generic k-class estimator
 #'
@@ -279,6 +344,8 @@ Kern.fun = function(Z,Kern="Euclid",X=NULL,Y=NULL){
     YX = as.matrix(cbind(Y,1,X)); lam=min(Re(eigen(solve(crossprod(YX))%*%(crossprod(YX,Omg)%*%YX))$values))
     diag(Omg)=-(lam-(1-lam)/n)/(1-(1-lam)/n)
   }
+  else if(Kern=="Laplace"){Omg=exp(-as.matrix(dist(Z)))}
+  #else if(Kern=="Cauchy"){Omg=exp(-0.5*as.matrix(dist(Z))^2)}
   else{stop("The method ",Kern," is not available.")}
   return(Omg)
 }
@@ -436,12 +503,12 @@ mmdlmrelv.b_test<- function(X1,X2=NULL,Z,B=199,wmat=NULL,cl=NULL,cluster=NULL){
 #' estimated with the MMD estimator. It is based on the wild bootstrap.
 #'
 #' @param reg.Obj is a regression output
-#' @param Kern type of kernel desired. 
+#' @param Kern type of kernel desired
 #' @param B number of wild bootstrap samples. Defaults to 199
 #' @param wmat in case the n x B matrix of wild bootstrap weights are supplied by the user.
-#' @param cl an integer to indicate number of child-processes in pbapply::pbsapply().
-#' @param cluster vector of length n with cluster ids if cluster-robust wild-bootstrap is
-#'  used
+#' @param cl an integer to indicate number of child-processes in pbapply::pbsapply()
+#' @param cluster vector of length n with cluster ids if cluster-robust wild-bootstrap is used
+#'
 #' @return the p-value, test statistic, 
 #' 
 #' @importFrom AER ivreg
@@ -450,9 +517,9 @@ mmdlmrelv.b_test<- function(X1,X2=NULL,Z,B=199,wmat=NULL,cl=NULL,cluster=NULL){
 #' @examples 
 #' ## Generate data and run MMD regression
 #' n=100; set.seed(12); X = rnorm(n); er = rnorm(n)
-#' X=scale(abs(X))+er/sqrt(2); Y=X+er
-#' speclmb.test(imlmreg.fit(Y,X,X)) #null
-#' speclmb.test(imlmreg.fit(Y,abs(X),X)) #alternative
+#' Y1=X+er/sqrt(1+X^2); Y2=X+abs(X)+er/sqrt(1+X^2)
+#' speclmb.test(imlmreg2.fit(Y1,X,X)) #null
+#' speclmb.test(imlmreg2.fit(Y2,X,X)) #alternative
 #' 
 #' @export
 
@@ -475,7 +542,7 @@ speclmb.test<- function(reg.Obj,Kern="Euclid",B=199,wmat=NULL,cl=NULL,cluster=NU
     if(class(reg.Obj)[2]=="ICM"){
       #check if the regression object contains y, x, and z used.
       ifelse(is.null(reg.Obj$y)&is.null(reg.Obj$x$regressors) & is.null(reg.Obj$Z),stop("reg.Obj needs to contain x and y."),1)
-      regfn=function(Y,X,Z){imlmreg.fit(Y,X,Z,Kern = class(reg.Obj)[3])}
+      regfn=function(Y,X,Z){imlmreg2.fit(Y,X,Z,Kern = class(reg.Obj)[3])}
       X=reg.Obj$x$regressors[,-1]; Z=reg.Obj$Z
       Y=reg.Obj$y; Ker=Kern.fun(Z,Kern = Kern)
     }else if(class(reg.Obj)[2]=="KClass"){
@@ -595,6 +662,42 @@ mddtest.boot<- function(U,V,B=199,wmat=NULL,cl=NULL,cluster=NULL){
   if(is.null(cl)){Tns=sapply(1:B, fn)}else{Tns=pbapply::pbsapply(1:B, fn,cl=cl)}
   ans=list()
   ans$statistic = mdd0; ans$p.value=(1+sum(Tns>ans$statistic))/(1+B)
+  ans
+}
+#==========================================================================================>
+
+#==========================================================================================>
+#' An ICM Test of Mean Independence by Wild Bootstrap
+#'
+#' \code{mindep.boot} tests the mean independence of U conditional on V using the wild
+#' bootstrap
+#'
+#' @param U univariate variable
+#' @param V possibly multivariate variable
+#' @param B number of wild bootstrap samples. Defaults to 199
+#' @param Kern type of kernel. See Details for available kernels
+#' @param wmat in case the n x B matrix of wild bootstrap weights are supplied by the user.
+#' @param cl an integer to indicate number of child-processes in pbapply::pbsapply().
+#' @param cluster vector of length n with cluster ids if cluster-robust wild-bootstrap is
+#'  used
+#' @return test statistic and p-value
+#' 
+#' @examples 
+#' set.seed(12); X = rnorm(200)
+#' mindep.boot(X,abs(X)); mindep.boot(abs(X),X)
+#' @export
+#' 
+mindep.boot<- function(U,V,B=199,Kern="Gauss",wmat=NULL,cl=NULL,cluster=NULL){
+  U = U-mean(U); n = length(U)
+  Ker = Kern.fun(V,Kern = Kern)
+  Tn0 = c(n*t(U)%*%Ker%*%U/(n*(n-1)))
+  if(is.null(wmat)){
+    wmat=wmat.mammen(n,B=B,seed=0,cluster=cluster)
+  }
+  fn = function(j) {Ustar=U*wmat[,j]; n*t(Ustar)%*%Ker%*%Ustar/(n*(n-1))}
+  if(is.null(cl)){Tns=sapply(1:B,fn)}else{Tns=pbapply::pbsapply(1:B,fn,cl=cl)}
+  ans=list()
+  ans$statistic = Tn0; ans$p.value=(1+sum(Tns>ans$statistic))/(1+B)
   ans
 }
 #==========================================================================================>

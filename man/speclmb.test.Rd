@@ -16,16 +16,15 @@ speclmb.test(
 \arguments{
 \item{reg.Obj}{is a regression output}
 
-\item{Kern}{type of kernel desired.}
+\item{Kern}{type of kernel desired}
 
 \item{B}{number of wild bootstrap samples. Defaults to 199}
 
 \item{wmat}{in case the n x B matrix of wild bootstrap weights are supplied by the user.}
 
-\item{cl}{an integer to indicate number of child-processes in pbapply::pbsapply().}
+\item{cl}{an integer to indicate number of child-processes in pbapply::pbsapply()}
 
-\item{cluster}{vector of length n with cluster ids if cluster-robust wild-bootstrap is
-used}
+\item{cluster}{vector of length n with cluster ids if cluster-robust wild-bootstrap is used}
 }
 \value{
 the p-value, test statistic,
@@ -37,8 +36,8 @@ estimated with the MMD estimator. It is based on the wild bootstrap.
 \examples{
 ## Generate data and run MMD regression
 n=100; set.seed(12); X = rnorm(n); er = rnorm(n)
-X=scale(abs(X))+er/sqrt(2); Y=X+er
-speclmb.test(imlmreg.fit(Y,X,X)) #null
-speclmb.test(imlmreg.fit(Y,abs(X),X)) #alternative
+Y1=X+er/sqrt(1+X^2); Y2=X+abs(X)+er/sqrt(1+X^2)
+speclmb.test(imlmreg2.fit(Y1,X,X)) #null
+speclmb.test(imlmreg2.fit(Y2,X,X)) #alternative
 
 }
