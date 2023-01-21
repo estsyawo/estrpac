@@ -272,3 +272,76 @@ rwMHgen<- function(start=NULL,posterior=NULL,...,propob=NULL,const=NULL,
   return(val)
 }
 #===========================================================================================#
+
+
+
+
+
+#===============================================================================================>
+#' \code{BB_CBOM} computes Montiel Olea & Plagborg-Moller 2018 Bayesian simultaneous bands.
+#'
+#' @param DQmat G by L matrix of random draws from the joint distribution
+#' @param alpha nominal level for \eqn{100(1-\alpha)\%} simultaneous coverage
+#' @param method type of credible interval to calibrate for simultaneous coverage. Defaults to
+#' the equal-tailed interval (ETI); other options include  'HDI', 'BCI' and 'SI'. 
+#' See \link[bayestestR]{ci} for details.
+#' @param qrangeID an index of the rows of \code{DQmat} to obtain simultaneous coverage for.
+#' @param tol a tolerance level as stopping rule for the algorithm.
+#' 
+#' @return BB: Lower and upper Bayesian bands
+#' @return zeta: the calibrated level at which simultaneous coverage is achieved.
+#' 
+#' @importFrom stats quantile
+#' @importFrom utils tail
+#' @importFrom bayestestR ci
+#' 
+#' @examples 
+#' set.seed(1); BB_CBOM(matrix(rnorm(1000),nrow=5))
+#' @export
+
+BB_CBOM=function (DQmat, alpha = 0.1,method = "ETI",qrangeID=NULL,tol=.Machine$double.eps^0.25) 
+{
+  G = nrow(DQmat); L = ncol(DQmat)
+  if(is.null(qrangeID)){qrangeID=1:G}
+  zbnds=c((alpha/G), alpha)/2
+  # function to compute credible intervals
+  cif=function(g,alpha) {
+    if(method!="ETI"){
+      ciobj=ci(DQmat[g,],ci=(1-alpha),method=method)
+      ans=c(ciobj$CI_low,ciobj$CI_high)
+    }else{ans = c(quantile(DQmat[g,],probs = c(alpha/2,(1-alpha/2)), type = 1))}
+    ans
+  }
+  
+  fn = function(zeta){
+    vm = t(sapply(1:G,cif,alpha=zeta*2))
+    zf = function(l){all(DQmat[qrangeID,l]>=vm[qrangeID,1]) & 
+        all(DQmat[qrangeID,l]<=vm[qrangeID,2])}
+    as.numeric(sum(sapply(1:L, zf))>=(1-alpha)*L)
+  } 
+  fn=Vectorize(fn); zb = zbnds; sq = seq(zb[1],zb[2],length.out = 10)
+  fnsq = fn(sq); dl = sq[2]-sq[1]
+  if(fnsq[1]==0){
+    warning("Coverage may be conservative over the entire search interval")
+    zeta=sq[1]
+    BB = t(sapply(1:G,cif,alpha=zeta*2))
+  }else if(tail(fnsq,1)==0 && fnsq[1]==1){ #search over interval
+    while(dl>tol){#need dl<= tol
+      d = which(fnsq==0)[1]
+      zb=sq[c((d-1),d)]
+      sq = seq(zb[1],zb[2],length.out = 10)
+      fnsq=fn(sq)
+      dl = sq[2]-sq[1]
+      #print(dl)
+    } #end while()
+    #compute zeta and Bayesian Bands
+    zeta=sq[which(fnsq==0)[1]-1]
+    BB = t(sapply(1:G,cif,alpha=zeta*2))
+  }else{
+    warning("Coverage is 1-alpha over the entire search interval")
+    zeta=tail(sq,1)
+    BB = t(sapply(1:G,cif,alpha=zeta*2))
+  }
+  list(BB = BB, zeta = zeta)
+}
+#===============================================================================================>
