@@ -97,7 +97,7 @@ imlmreg.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
 }
 
 #==========================================================================================>
-#' Generic Linear Integrated Moment Regression
+#' ICM-IV Regression
 #'
 #' \code{imlmreg2.fit} runs a generic linear integrated moment regression allowing for different
 #' kernels. This variant uses centred instruments in the meat of the sandwich matrix
@@ -105,8 +105,12 @@ imlmreg.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
 #' @param Y outcome variable
 #' @param X matrix of covariates.
 #' @param Z matrix of instruments
+#' @param weights a vector of length \eqn{n} of weights for observations
 #' @param Kern type of kernel. See Details for available kernels
 #' @param vctype type of sandwich covariance matrix (see \link[sandwich]{vcovHC})
+#' @param cluster vector of length \eqn{n} with cluster assignments of observations.
+#' @param clus.est.type options are "A" and "B". "A" sets \eqn{K(Z_i,Z_j)=0} for \eqn{i,j} in the
+#' same cluster while option "B" only does so for \eqn{i=j}.
 #'
 #' @details The \eqn{(i,j)}'th elements of available kernel methods are
 #' \describe{
@@ -133,26 +137,36 @@ imlmreg.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
 #' summary(AER::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
 #' @export
 
-imlmreg2.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
-  Y = Y# - mean(Y); 
-  X=as.matrix(cbind(1,X)) #centering at the mean
-  #for (k in 1:ncol(X)){X[,k]=X[,k]-mean(X[,k])}; 
+imlmreg2.fit = function(Y,X,Z,weights=NULL,Kern="Euclid",vctype="HC3",
+                        cluster=NULL,clus.est.type="A"){
+  X=as.matrix(cbind(1,X))
   n = length(Y)
-  Z = as.matrix(Z) #in case Z is already a Euclidean distance matrix
+  Z = as.matrix(Z)
   Mz = Kern.fun(Z,Kern,X[,-1],Y)
+  if(!is.null(cluster)){
+    uclus<- unique(cluster); G<- length(uclus)
+    ## tailor the Kernel matrix for cluster jackknifing ...
+    if(clus.est.type=="A"){
+      for(g in 1:G){
+        idclus.g<- which(cluster==uclus[g])
+        Mz[idclus.g,idclus.g]<- 0
+      }
+    }else if(clus.est.type=="B"){
+      diag(Mz)<- 0.0
+    }else{
+      stop("Estimator type under clustered data not recognised.")
+    }
+    
+  }#end if(!is.null(cluster))
   Zhat = Mz%*%X/(n-1)
-  #Aninv=solve(crossprod(Zhat,X)/n)
-  obj=AER::ivreg(Y~as.matrix(X[,-1])|as.matrix(Zhat[,-1]),x=TRUE)
-  # #for (k in 1:ncol(Zhat)){Zhat[,k] = Zhat[,k]-mean(Zhat[,k])} #centre the constructed instruments
-  # Bn = crossprod(Zhat*c(obj$residuals))/n +
-  #   mean(obj$residuals^2)*tcrossprod(c(apply(Zhat,2,mean))) #small adjustment for centring
-  # vcovHC=Aninv%*%Bn%*%Aninv/obj$df.residual
-  # obj$HC_Std.Err=sqrt(diag(vcovHC)); obj$vcovHC=vcovHC
-  # obj$Z=Z; obj$XX=X; obj$YY=Y
-  # class(obj)=c(class(obj),"ICM",Kern)
-  # obj
+  obj=AER::ivreg(Y~as.matrix(X[,-1])|as.matrix(Zhat[,-1]),x=TRUE,weights = weights)
   obj$Z=Z
-  obj$vcovHC=sandwich::vcovHC(obj,type=vctype)
+  if(is.null(cluster)){
+    obj$vcovHC=sandwich::vcovHC(obj,type=vctype)
+  }else{
+    obj$vcovHC=sandwich::vcovCL(obj,cluster = cluster)
+  }
+  
   obj$HC_Std.Err=sqrt(diag(obj$vcovHC))
   class(obj)=c(class(obj),"ICM",Kern)
   obj
@@ -169,6 +183,10 @@ imlmreg2.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
 #' @param X matrix of covariates.
 #' @param Z matrix of instruments. Defaults to \code{X}.
 #' @param method method of the k-class to implement. Defaults to "JIVE".
+#' @param vctype type of sandwich covariance matrix (see \link[sandwich]{vcovHC})
+#' @param cluster vector of length \eqn{n} with cluster assignments of observations.
+#' @param weights a vector of length \eqn{n} of weights for observations
+#' 
 #' @return an IV regression object which also contains coefficients, standard errors, etc.
 #' @details Available methods in the k-Class include
 #' \describe{
@@ -189,7 +207,7 @@ imlmreg2.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
 #' summary(AER::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
 #' @export
 
-kClassIVreg.fit = function(Y,X,Z,method="JIVE"){
+kClassIVreg.fit = function(Y,X,Z,method="JIVE",vctype="HC3",cluster=NULL,weights=NULL){
   n=length(Y);Z = as.matrix(Z) #in case Z is already an appropriate kernel matrix
   X=as.matrix(X) #the design matrix
   
@@ -210,8 +228,12 @@ kClassIVreg.fit = function(Y,X,Z,method="JIVE"){
   }else{Mz=Z}
   
   Zhat = Mz%*%X/n
-  obj=AER::ivreg(Y~X|as.matrix(Zhat),x=TRUE,y=TRUE); obj$Z=Z
-  obj$vcovHC=sandwich::vcovHC(obj)
+  obj=AER::ivreg(Y~X|as.matrix(Zhat),x=TRUE,y=TRUE,weights = weights); obj$Z=Z
+  if(is.null(cluster)){
+    obj$vcovHC=sandwich::vcovHC(obj,type=vctype)
+  }else{
+    obj$vcovHC=sandwich::vcovCL(obj,cluster = cluster)
+  }
   obj$HC_Std.Err=sqrt(diag(obj$vcovHC))
   class(obj)=c(class(obj),"KClass",method)
   obj
@@ -326,7 +348,7 @@ Kern.fun = function(Z,Kern="Euclid",X=NULL,Y=NULL){
   if(Kern=="Euclid"){Omg=-as.matrix(dist(Z))}
   else if(Kern=="Gauss.W"){
     Omg=exp(-0.5*as.matrix(dist(Z%*%expm::sqrtm(solve(cov(Z)))))^2)}
-  else if(Kern=="Gauss"){Omg=exp(-0.5*as.matrix(dist(Z))^2)}
+  else if(Kern=="Gauss"){Omg=exp(-0.5*as.matrix(dist(Z))^2);diag(Omg)=0.0}
   else if(Kern=="DL"){
     Omg=Kern.fun_DL(Z)
   }else if(Kern=="Esc6"){

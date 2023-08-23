@@ -2,9 +2,18 @@
 % Please edit documentation in R/dCovReg.R
 \name{imlmreg2.fit}
 \alias{imlmreg2.fit}
-\title{Generic Linear Integrated Moment Regression}
+\title{ICM-IV Regression}
 \usage{
-imlmreg2.fit(Y, X, Z, Kern = "Euclid", vctype = "HC3")
+imlmreg2.fit(
+  Y,
+  X,
+  Z,
+  weights = NULL,
+  Kern = "Euclid",
+  vctype = "HC3",
+  cluster = NULL,
+  clus.est.type = "A"
+)
 }
 \arguments{
 \item{Y}{outcome variable}
@@ -13,9 +22,16 @@ imlmreg2.fit(Y, X, Z, Kern = "Euclid", vctype = "HC3")
 
 \item{Z}{matrix of instruments}
 
+\item{weights}{a vector of length \eqn{n} of weights for observations}
+
 \item{Kern}{type of kernel. See Details for available kernels}
 
 \item{vctype}{type of sandwich covariance matrix (see \link[sandwich]{vcovHC})}
+
+\item{cluster}{vector of length \eqn{n} with cluster assignments of observations.}
+
+\item{clus.est.type}{options are "A" and "B". "A" sets \eqn{K(Z_i,Z_j)=0} for \eqn{i,j} in the
+same cluster while option "B" only does so for \eqn{i=j}.}
 }
 \value{
 an IV regression object which also contains coefficients, standard errors, etc.

@@ -4,7 +4,15 @@
 \alias{kClassIVreg.fit}
 \title{Generic k-class estimator}
 \usage{
-kClassIVreg.fit(Y, X, Z, method = "JIVE")
+kClassIVreg.fit(
+  Y,
+  X,
+  Z,
+  method = "JIVE",
+  vctype = "HC3",
+  cluster = NULL,
+  weights = NULL
+)
 }
 \arguments{
 \item{Y}{outcome variable}
@@ -14,6 +22,12 @@ kClassIVreg.fit(Y, X, Z, method = "JIVE")
 \item{Z}{matrix of instruments. Defaults to \code{X}.}
 
 \item{method}{method of the k-class to implement. Defaults to "JIVE".}
+
+\item{vctype}{type of sandwich covariance matrix (see \link[sandwich]{vcovHC})}
+
+\item{cluster}{vector of length \eqn{n} with cluster assignments of observations.}
+
+\item{weights}{a vector of length \eqn{n} of weights for observations}
 }
 \value{
 an IV regression object which also contains coefficients, standard errors, etc.
