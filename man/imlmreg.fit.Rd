@@ -41,5 +41,5 @@ The \eqn{(i,j)}'th elements of available kernel methods are
 n=200; set.seed(12); X = rnorm(n); er = (rchisq(n,df=1)-1)/sqrt(2); Z=X
 X=scale(abs(X))+er/sqrt(2); Y=X+er
 summary(imlmreg.fit(Y=Y,X=X,Z=Z))
-summary(AER::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
+summary(ivreg::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
 }

@@ -32,7 +32,7 @@ mmdreg.fit = function(Y,X,Z=X,cl=NULL){
   if(is.null(cl)){Zhat = t(sapply(1:n,fn))}else{Zhat = t(pbapply::pbsapply(1:n,fn,cl=cl))}
   if(nrow(Zhat)!=n){Zhat=t(Zhat)} #in case row instead of column matrix
   Zhat = Zhat*n/(n-1) #U-statistic correction
-  obj=AER::ivreg(YY~as.matrix(XX)|as.matrix(Zhat),x=TRUE)
+  obj=ivreg::ivreg(YY~as.matrix(XX)|as.matrix(Zhat),x=TRUE)
   fn = function(i) sum(c(Mz[i,])*obj$residuals)/(n-1)
   if(is.null(cl)){Uhat = t(sapply(1:n,fn))}else{Uhat = t(pbapply::pbsapply(1:n,fn,cl=cl))}
   if(nrow(Uhat)!=n){Uhat=t(Uhat)} #in case row instead of column matrix
@@ -73,14 +73,14 @@ mmdreg.fit = function(Y,X,Z=X,cl=NULL){
 #' 
 #' @importFrom stats dist
 #' @importFrom sandwich vcovHC
-#' @importFrom AER ivreg
+#' @importFrom ivreg ivreg
 #' 
 #' @examples 
 #' ## Generate data and run MMD regression
 #' n=200; set.seed(12); X = rnorm(n); er = (rchisq(n,df=1)-1)/sqrt(2); Z=X
 #' X=scale(abs(X))+er/sqrt(2); Y=X+er
 #' summary(imlmreg.fit(Y=Y,X=X,Z=Z))
-#' summary(AER::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
+#' summary(ivreg::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
 #' @export
 
 imlmreg.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
@@ -89,7 +89,7 @@ imlmreg.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
   Z = as.matrix(Z) #in case Z is already a Euclidean distance matrix
   if(!(ncol(Z)==nrow(Z)&isSymmetric(Z))){Mz = Kern.fun(Z,Kern,XX,YY)}else{Mz=Z}
   Zhat = Mz%*%XX/(n-1)
-  obj=AER::ivreg(YY~as.matrix(XX)|as.matrix(Zhat),x=TRUE); obj$Z=Z
+  obj=ivreg::ivreg(YY~as.matrix(XX)|as.matrix(Zhat),x=TRUE); obj$Z=Z
   obj$vcovHC=sandwich::vcovHC(obj,type=vctype)
   obj$HC_Std.Err=sqrt(diag(obj$vcovHC))
   class(obj)=c(class(obj),"ICM",Kern)
@@ -127,14 +127,14 @@ imlmreg.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
 #'
 #' @importFrom stats dist
 #' @importFrom sandwich vcovHC
-#' @importFrom AER ivreg
+#' @importFrom ivreg ivreg
 #'
 #' @examples
 #' ## Generate data and run MMD regression
 #' n=200; set.seed(12); X = rnorm(n); er = (rchisq(n,df=1)-1)/sqrt(2); Z=X
 #' X=scale(abs(X))+er/sqrt(2); Y=X+er
 #' summary(imlmreg2.fit(Y=Y,X=X,Z=Z))
-#' summary(AER::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
+#' summary(ivreg::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
 #' @export
 
 imlmreg2.fit = function(Y,X,Z,weights=NULL,Kern="Euclid",vctype="HC3",
@@ -159,7 +159,8 @@ imlmreg2.fit = function(Y,X,Z,weights=NULL,Kern="Euclid",vctype="HC3",
     
   }#end if(!is.null(cluster))
   Zhat = Mz%*%X/(n-1)
-  obj=AER::ivreg(Y~as.matrix(X[,-1])|as.matrix(Zhat[,-1]),x=TRUE,weights = weights)
+  #obj=ivreg::ivreg(Y~as.matrix(X[,-1])|as.matrix(Zhat[,-1]),x=TRUE,weights = weights)
+  obj=ivreg::ivreg(Y~as.matrix(X[,-1])|as.matrix(Zhat[,-1]),x=TRUE,weights = weights)
   obj$Z=Z
   if(is.null(cluster)){
     obj$vcovHC=sandwich::vcovHC(obj,type=vctype)
@@ -197,14 +198,14 @@ imlmreg2.fit = function(Y,X,Z,weights=NULL,Kern="Euclid",vctype="HC3",
 #' }
 
 #' @importFrom sandwich vcovHC
-#' @importFrom AER ivreg
+#' @importFrom ivreg ivreg
 #' 
 #' @examples 
 #' ## Generate data and run MMD regression
 #' n=200; set.seed(12); X = rnorm(n); er = rchisq(n,df=1)-1; Z=X 
 #' Z=cbind(Z,Z^2,Z^3,Z^4);X=scale(abs(X))+er/sqrt(2); Y=X+er
 #' summary(kClassIVreg.fit(Y=Y,X=X,Z=Z))
-#' summary(AER::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
+#' summary(ivreg::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
 #' @export
 
 kClassIVreg.fit = function(Y,X,Z,method="JIVE",vctype="HC3",cluster=NULL,weights=NULL){
@@ -228,7 +229,7 @@ kClassIVreg.fit = function(Y,X,Z,method="JIVE",vctype="HC3",cluster=NULL,weights
   }else{Mz=Z}
   
   Zhat = Mz%*%X/n
-  obj=AER::ivreg(Y~X|as.matrix(Zhat),x=TRUE,y=TRUE,weights = weights); obj$Z=Z
+  obj=ivreg::ivreg(Y~X|as.matrix(Zhat),x=TRUE,y=TRUE,weights = weights); obj$Z=Z
   if(is.null(cluster)){
     obj$vcovHC=sandwich::vcovHC(obj,type=vctype)
   }else{
@@ -533,7 +534,7 @@ mmdlmrelv.b_test<- function(X1,X2=NULL,Z,B=199,wmat=NULL,cl=NULL,cluster=NULL){
 #'
 #' @return the p-value, test statistic, 
 #' 
-#' @importFrom AER ivreg
+#' @importFrom ivreg ivreg
 #' @importFrom stats coef lm
 #' 
 #' @examples 
