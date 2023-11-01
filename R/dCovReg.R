@@ -137,7 +137,7 @@ imlmreg.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
 #' summary(ivreg::ivreg(formula = Y ~ X | Z)) #compare to conventional IV regression
 #' @export
 
-imlmreg2.fit = function(Y,X,Z,weights=NULL,Kern="Euclid",vctype="HC3",
+imlmreg2.fit = function(Y,X,Z,weights=NULL,Kern="Euclid",vctype="HC0",
                         cluster=NULL,clus.est.type="A"){
   X=as.matrix(cbind(1,X))
   n = length(Y)
@@ -582,12 +582,20 @@ speclmb.test<- function(reg.Obj,Kern="Euclid",B=199,wmat=NULL,cl=NULL,cluster=NU
   if(is.null(wmat)){wmat = wmat.mammen(n=n,B=B,seed = n,cluster=cluster)}
   
   fn<- function(j){
-    Ystar = reg.Obj$fitted.values + sqrt(n/(n-k-1))*reg.Obj$residuals*wmat[,j]
-    reg.ObjStar=regfn(Ystar,X,Z)
-    t(reg.ObjStar$residuals)%*%Ker%*%reg.ObjStar$residuals/(n-1)
+    tryCatch(
+      expr = {
+        Ystar = reg.Obj$fitted.values + sqrt(n/(n-k-1))*reg.Obj$residuals*wmat[,j]
+        reg.ObjStar=regfn(Ystar,X,Z)
+        res=t(reg.ObjStar$residuals)%*%Ker%*%reg.ObjStar$residuals/(n-1)
+        return(res)
+      },
+      error = function(e){return(NA)},
+      warning = function(w){return(NULL)},
+      finally = { }
+    )#end tryCatch    
   }
   if(is.null(cl)){Tn_boot=sapply(1:B,fn)}else{Tn_boot=pbapply::pbsapply(1:B,fn,cl=cl)}
-  list(statistic=Tn_o,p.value=mean(c(Tn_boot)>c(Tn_o)))
+  list(statistic=Tn_o,p.value=mean(c(Tn_boot)>c(Tn_o),na.rm = T))
 }
 #==========================================================================================>
 

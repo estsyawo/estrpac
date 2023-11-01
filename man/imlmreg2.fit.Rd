@@ -10,7 +10,7 @@ imlmreg2.fit(
   Z,
   weights = NULL,
   Kern = "Euclid",
-  vctype = "HC3",
+  vctype = "HC0",
   cluster = NULL,
   clus.est.type = "A"
 )
