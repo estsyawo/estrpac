@@ -578,7 +578,8 @@ speclmb.test<- function(reg.Obj,Kern="Euclid",B=199,wmat=NULL,cl=NULL,cluster=NU
   }#end if(length(.))
   
   k = length(coef(reg.Obj))-1; n = length(Y)
-  Tn_o = t(reg.Obj$residuals)%*%Ker%*%reg.Obj$residuals/(n-1)
+  Tn_o = c(t(reg.Obj$residuals)%*%Ker%*%reg.Obj$residuals/(n-1))
+  
   if(is.null(wmat)){wmat = wmat.mammen(n=n,B=B,seed = n,cluster=cluster)}
   
   fn<- function(j){
@@ -586,7 +587,7 @@ speclmb.test<- function(reg.Obj,Kern="Euclid",B=199,wmat=NULL,cl=NULL,cluster=NU
       expr = {
         Ystar = reg.Obj$fitted.values + sqrt(n/(n-k-1))*reg.Obj$residuals*wmat[,j]
         reg.ObjStar=regfn(Ystar,X,Z)
-        res=t(reg.ObjStar$residuals)%*%Ker%*%reg.ObjStar$residuals/(n-1)
+        res=c(t(reg.ObjStar$residuals)%*%Ker%*%reg.ObjStar$residuals/(n-1))
         return(res)
       },
       error = function(e){return(NA)},
@@ -594,8 +595,13 @@ speclmb.test<- function(reg.Obj,Kern="Euclid",B=199,wmat=NULL,cl=NULL,cluster=NU
       finally = { }
     )#end tryCatch    
   }
-  if(is.null(cl)){Tn_boot=sapply(1:B,fn)}else{Tn_boot=pbapply::pbsapply(1:B,fn,cl=cl)}
-  list(statistic=Tn_o,p.value=mean(c(Tn_boot)>c(Tn_o),na.rm = T))
+  if(!is.na(Tn_o)){
+    if(is.null(cl)){Tn_boot=sapply(1:B,fn)}else{Tn_boot=pbapply::pbsapply(1:B,fn,cl=cl)}
+    ans=list(statistic=Tn_o,p.value=mean(Tn_boot[!is.na(Tn_boot)] > Tn_o))
+  }else{
+    ans=list(statistic=Tn_o,p.value=NA)
+  }
+  return(ans)
 }
 #==========================================================================================>
 
