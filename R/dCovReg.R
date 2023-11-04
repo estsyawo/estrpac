@@ -87,7 +87,11 @@ imlmreg.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
   YY = Y - mean(Y);XX=as.matrix(X)
   for (k in 1:ncol(XX)){XX[,k]=XX[,k]-mean(XX[,k])}; n = length(Y)
   Z = as.matrix(Z) #in case Z is already a Euclidean distance matrix
-  if(!(ncol(Z)==nrow(Z)&isSymmetric(Z))){Mz = Kern.fun(Z,Kern,XX,YY)}else{Mz=Z}
+  if(!(ncol(Z)==nrow(Z)&isSymmetric(Z))){
+    Mz = Kern.fun(Z,Kern,XX,YY)
+  }else{
+      Mz=Z
+      }
   Zhat = Mz%*%XX/(n-1)
   obj=ivreg::ivreg(YY~as.matrix(XX)|as.matrix(Zhat),x=TRUE); obj$Z=Z
   obj$vcovHC=sandwich::vcovHC(obj,type=vctype)
@@ -142,7 +146,12 @@ imlmreg2.fit = function(Y,X,Z,weights=NULL,Kern="Euclid",vctype="HC0",
   X=as.matrix(cbind(1,X))
   n = length(Y)
   Z = as.matrix(Z)
-  Mz = Kern.fun(Z,Kern,X[,-1],Y)
+  
+  if(!isSymmetric(Z)){
+    Mz = Kern.fun(Z,Kern,X[,-1],Y)
+  }else{
+    Mz=Z
+  }
   if(!is.null(cluster)){
     uclus<- unique(cluster); G<- length(uclus)
     ## tailor the Kernel matrix for cluster jackknifing ...
@@ -159,9 +168,8 @@ imlmreg2.fit = function(Y,X,Z,weights=NULL,Kern="Euclid",vctype="HC0",
     
   }#end if(!is.null(cluster))
   Zhat = Mz%*%X/(n-1)
-  #obj=ivreg::ivreg(Y~as.matrix(X[,-1])|as.matrix(Zhat[,-1]),x=TRUE,weights = weights)
   obj=ivreg::ivreg(Y~as.matrix(X[,-1])|as.matrix(Zhat[,-1]),x=TRUE,weights = weights)
-  obj$Z=Z
+  obj$Z=Z; obj$Mz = Mz
   if(is.null(cluster)){
     obj$vcovHC=sandwich::vcovHC(obj,type=vctype)
   }else{
@@ -565,9 +573,9 @@ speclmb.test<- function(reg.Obj,Kern="Euclid",B=199,wmat=NULL,cl=NULL,cluster=NU
     if(class(reg.Obj)[2]=="ICM"){
       #check if the regression object contains y, x, and z used.
       ifelse(is.null(reg.Obj$y)&is.null(reg.Obj$x$regressors) & is.null(reg.Obj$Z),stop("reg.Obj needs to contain x and y."),1)
-      regfn=function(Y,X,Z){imlmreg2.fit(Y,X,Z,Kern = class(reg.Obj)[3])}
+      regfn=function(Y,X,Z){imlmreg2.fit(Y,X,Z=reg.Obj$Mz)}
       X=reg.Obj$x$regressors[,-1]; Z=reg.Obj$Z
-      Y=reg.Obj$y; Ker=Kern.fun(Z,Kern = Kern)
+      Y=reg.Obj$y; Ker=reg.Obj$Mz
     }else if(class(reg.Obj)[2]=="KClass"){
       #check if the regression object contains y, x, and z used.
       ifelse(is.null(reg.Obj$y)&is.null(reg.Obj$x$regressors)&is.null(reg.Obj$Z),stop("reg.Obj needs to contain x and y."),1)  
