@@ -345,3 +345,86 @@ BB_CBOM=function (DQmat, alpha = 0.1,method = "ETI",qrangeID=NULL,tol=.Machine$d
   list(BB = BB, zeta = zeta)
 }
 #===============================================================================================>
+
+
+
+
+
+#=====================================================================================>
+#' \code{Band.Fn.objs} constructs Chernozhukov et al. 2013 Uniform Confidence Bands
+#'
+#' @param Fn G-length vector of the function of interest
+#' @param Boot.Fn a \eqn{G\times L} matrix of samples of the function Fn
+#' @param n sample size of the data used to compute Fn
+#' 
+#' @return Sigv:
+#' @return tbv: 
+#' 
+#' @importFrom stats IQR qnorm
+#' 
+#' @examples 
+#' set.seed(1); Band.Fn.objs(Fn=rep(0,5),Boot.Fn=matrix(rnorm(1000),nrow=5),n=100)
+#' @export
+
+Band.Fn.objs<- function(Fn,Boot.Fn,n){
+  Zbstar = Boot.Fn
+  for (j in 1:ncol(Boot.Fn)){Zbstar[,j] = Zbstar[,j] - Fn}
+  Zbstar = sqrt(n)*Zbstar
+  Sigv = apply(Zbstar,1,IQR)/(qnorm(0.75)-qnorm(0.25)) #a robust estimator of sigma
+  
+  tbmat = abs(Zbstar)
+  for (j in 1:ncol(tbmat)) {tbmat[,j]/Sigv}
+  
+  tbv = apply(tbmat,2,max)
+  list(Sigv=Sigv,tbv=tbv)
+}
+#=====================================================================================>
+#' \code{UBand.Fn} constructs Chernozhukov et al. 2013 Uniform Confidence Bands
+#' using output from \link{Band.Fn.objs}
+#' @param Fn G-length vector of the function of interest
+#' @param BDobjs output object from \link{Band.Fn.objs}
+#' @param n sample size of the data used to compute Fn
+#' @param alpha significance level
+#' 
+#' @return LB.Fn: G-length lower Uniform Confidence band
+#' @return UB.Fn: G-length upper Uniform Confidence band
+#' 
+#' @importFrom stats quantile
+#' 
+#' @examples 
+#' set.seed(1); 
+#' BDobjs=Band.Fn.objs(Fn=rep(0,5),Boot.Fn=matrix(rnorm(1000),nrow=5),n=100)
+#' UBand.Fn(Fn=rep(0,5),BDobjs=BDobjs,n=100)
+#' 
+#' @export
+
+UBand.Fn=function(Fn,BDobjs,n,alpha=0.05){
+  LB.Fn = Fn - quantile(BDobjs$tbv,1-alpha)*BDobjs$Sigv/sqrt(n) 
+  UB.Fn = Fn + quantile(BDobjs$tbv,1-alpha)*BDobjs$Sigv/sqrt(n)
+  list(LB.Fn=LB.Fn, UB.Fn=UB.Fn)
+}
+#=====================================================================================>
+#' \code{compute.Ubands} is a high-level function for computing uniform confidence bands 
+#' according to Chernozhukov et al. 2013
+#' @param Fn G-length vector of the function of interest
+#' @param Boot.Fn a \eqn{G \times L} matrix of samples of the function Fn
+#' @param n sample size of the data used to compute Fn
+#' @param alpha significance level
+#' 
+#' @return LB.Fn: G-length lower Uniform Confidence band
+#' @return UB.Fn: G-length upper Uniform Confidence band
+#' 
+#' @importFrom stats quantile
+#' 
+#' @examples 
+#' set.seed(1); 
+#' Ubands=compute.Ubands(Fn=rep(0,5),Boot.Fn=matrix(rnorm(1000),nrow=5),n=100)
+#' 
+#' @export
+
+compute.Ubands<- function(Fn,Boot.Fn,n,alpha = 0.05){
+  BandObjects = Band.Fn.objs(Fn=Fn,Boot.Fn = Boot.Fn,n=n)
+  UBand.Fn(Fn=Fn,BDobjs = BandObjects,alpha = alpha,n=n)
+}
+
+#=====================================================================================>
