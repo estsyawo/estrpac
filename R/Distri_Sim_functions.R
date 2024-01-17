@@ -370,7 +370,7 @@ Band.Fn.objs<- function(Fn,Boot.Fn,n){
   Zbstar = Boot.Fn
   for (j in 1:ncol(Boot.Fn)){Zbstar[,j] = Zbstar[,j] - Fn}
   Zbstar = sqrt(n)*Zbstar
-  Sigv = apply(Zbstar,1,IQR)/(qnorm(0.75)-qnorm(0.25)) #a robust estimator of sigma
+  Sigv = apply(Zbstar,1,IQR,na.rm=T)/(qnorm(0.75)-qnorm(0.25)) #a robust estimator of sigma
   
   tbmat = abs(Zbstar)
   for (j in 1:ncol(tbmat)) {tbmat[,j]/Sigv}
@@ -399,8 +399,8 @@ Band.Fn.objs<- function(Fn,Boot.Fn,n){
 #' @export
 
 UBand.Fn=function(Fn,BDobjs,n,alpha=0.05){
-  LB.Fn = Fn - quantile(BDobjs$tbv,1-alpha)*BDobjs$Sigv/sqrt(n) 
-  UB.Fn = Fn + quantile(BDobjs$tbv,1-alpha)*BDobjs$Sigv/sqrt(n)
+  LB.Fn = Fn - quantile(BDobjs$tbv,1-alpha,na.rm=T)*BDobjs$Sigv/sqrt(n) 
+  UB.Fn = Fn + quantile(BDobjs$tbv,1-alpha,na.rm=T)*BDobjs$Sigv/sqrt(n)
   list(LB.Fn=LB.Fn, UB.Fn=UB.Fn)
 }
 #=====================================================================================>
