@@ -4,14 +4,14 @@
 \alias{sup_t_Band.Fn}
 \title{\code{sup_t_Band.Fn} constructs the sup-t uniform band}
 \usage{
-sup_t_Band.Fn(Fn, DQmat, Sigv, n, alpha = 0.05)
+sup_t_Band.Fn(Fn, Sigv, DQmat, n, alpha = 0.05)
 }
 \arguments{
 \item{Fn}{G-length vector of the function of interest}
 
-\item{DQmat}{\eqn{G\times L} matrix of mean-zero random draws from the (joint) distribution}
-
 \item{Sigv}{the \eqn{G\times 1} vector of standard deviations corresponding to estimates Fn}
+
+\item{DQmat}{\eqn{G\times L} matrix of mean-zero random draws from the (joint) distribution}
 
 \item{n}{sample size of the data used to compute Fn}
 
@@ -27,6 +27,6 @@ UB.Fn: G-length upper Uniform Confidence band
 }
 \examples{
 set.seed(1); DQmat=matrix(rnorm(1000),nrow=5)
-sup_t_Band.Fn(Fn=(1:5)/5,DQmat=DQmat,Sigv=rep(1,5),n=100)
+sup_t_Band.Fn(Fn=(1:5)/5,Sigv=rep(1,5),DQmat=DQmat,n=100)
 
 }

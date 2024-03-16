@@ -432,8 +432,8 @@ compute.Ubands<- function(Fn,Boot.Fn,n,alpha = 0.05){
 #=====================================================================================>
 #' \code{sup_t_Band.Fn} constructs the sup-t uniform band
 #' @param Fn G-length vector of the function of interest
-#' @param DQmat \eqn{G\times L} matrix of mean-zero random draws from the (joint) distribution
 #' @param Sigv the \eqn{G\times 1} vector of standard deviations corresponding to estimates Fn
+#' @param DQmat \eqn{G\times L} matrix of mean-zero random draws from the (joint) distribution
 #' @param n sample size of the data used to compute Fn
 #' @param alpha significance level
 #' 
@@ -444,11 +444,11 @@ compute.Ubands<- function(Fn,Boot.Fn,n,alpha = 0.05){
 #' 
 #' @examples 
 #' set.seed(1); DQmat=matrix(rnorm(1000),nrow=5)
-#' sup_t_Band.Fn(Fn=(1:5)/5,DQmat=DQmat,Sigv=rep(1,5),n=100)
+#' sup_t_Band.Fn(Fn=(1:5)/5,Sigv=rep(1,5),DQmat=DQmat,n=100)
 #' 
 #' @export
 
-sup_t_Band.Fn=function(Fn,DQmat,Sigv,n,alpha=0.05){
+sup_t_Band.Fn=function(Fn,Sigv,DQmat,n,alpha=0.05){
   
   tbmat = abs(DQmat)
   for (j in 1:ncol(tbmat)) {tbmat[,j]/Sigv}
