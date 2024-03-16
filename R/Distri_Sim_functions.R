@@ -428,3 +428,37 @@ compute.Ubands<- function(Fn,Boot.Fn,n,alpha = 0.05){
 }
 
 #=====================================================================================>
+
+#=====================================================================================>
+#' \code{sup_t_Band.Fn} constructs the sup-t uniform band
+#' @param Fn G-length vector of the function of interest
+#' @param DQmat \eqn{G\times L} matrix of mean-zero random draws from the (joint) distribution
+#' @param Sigv the \eqn{G\times 1} vector of standard deviations corresponding to estimates Fn
+#' @param n sample size of the data used to compute Fn
+#' @param alpha significance level
+#' 
+#' @return LB.Fn: G-length lower Uniform Confidence band
+#' @return UB.Fn: G-length upper Uniform Confidence band
+#' 
+#' @importFrom stats quantile
+#' 
+#' @examples 
+#' set.seed(1); DQmat=matrix(rnorm(1000),nrow=5)
+#' sup_t_Band.Fn(Fn=(1:5)/5,DQmat=DQmat,Sigv=rep(1,5),n=100)
+#' 
+#' @export
+
+sup_t_Band.Fn=function(Fn,DQmat,Sigv,n,alpha=0.05){
+  
+  tbmat = abs(DQmat)
+  for (j in 1:ncol(tbmat)) {tbmat[,j]/Sigv}
+  
+  tbv = apply(tbmat,2,max)
+  c.alf = quantile(tbv,1-alpha,na.rm=T) #critical value of sup_t
+  
+  LB.Fn = Fn - c.alf*Sigv
+  UB.Fn = Fn + c.alf*Sigv
+  
+  list(LB.Fn=LB.Fn, UB.Fn=UB.Fn)
+}
+#=====================================================================================>
