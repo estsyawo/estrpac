@@ -9,9 +9,11 @@ sup_t_Band.Fn(Fn, Sigv, DQmat, n, alpha = 0.05)
 \arguments{
 \item{Fn}{G-length vector of the function of interest}
 
-\item{Sigv}{the \eqn{G\times 1} vector of standard deviations corresponding to estimates Fn}
+\item{Sigv}{the \eqn{G \times 1} vector of standard deviations corresponding to 
+estimates Fn}
 
-\item{DQmat}{\eqn{G\times L} matrix of mean-zero random draws from the (joint) distribution}
+\item{DQmat}{\eqn{G \times L} matrix of standard normal random draws 
+from the (joint) distribution of Fn}
 
 \item{n}{sample size of the data used to compute Fn}
 

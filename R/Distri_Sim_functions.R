@@ -432,8 +432,10 @@ compute.Ubands<- function(Fn,Boot.Fn,n,alpha = 0.05){
 #=====================================================================================>
 #' \code{sup_t_Band.Fn} constructs the sup-t uniform band
 #' @param Fn G-length vector of the function of interest
-#' @param Sigv the \eqn{G\times 1} vector of standard deviations corresponding to estimates Fn
-#' @param DQmat \eqn{G\times L} matrix of mean-zero random draws from the (joint) distribution
+#' @param Sigv the \eqn{G \times 1} vector of standard deviations corresponding to 
+#' estimates Fn
+#' @param DQmat \eqn{G \times L} matrix of standard normal random draws 
+#' from the (joint) distribution of Fn
 #' @param n sample size of the data used to compute Fn
 #' @param alpha significance level
 #' 
@@ -450,11 +452,13 @@ compute.Ubands<- function(Fn,Boot.Fn,n,alpha = 0.05){
 
 sup_t_Band.Fn=function(Fn,Sigv,DQmat,n,alpha=0.05){
   
-  tbmat = abs(DQmat)
-  for (j in 1:ncol(tbmat)) {tbmat[,j]/Sigv}
+  #tbmat = abs(DQmat)
+  #for (j in 1:ncol(tbmat)) {tbmat[,j]/Sigv}
   
-  tbv = apply(tbmat,2,max)
-  c.alf = quantile(tbv,1-alpha,na.rm=T) #critical value of sup_t
+  #tbv = apply(tbmat,2,max)
+  #tbv = apply(abs(DQmat),2,max)
+  #c.alf = quantile(tbv,1-alpha,na.rm=T) #critical value of sup_t
+  c.alf = quantile(apply(abs(DQmat),2,max),1-alpha,na.rm=T) #critical value of sup_t
   
   LB.Fn = Fn - c.alf*Sigv
   UB.Fn = Fn + c.alf*Sigv
