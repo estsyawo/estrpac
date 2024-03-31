@@ -430,39 +430,63 @@ compute.Ubands<- function(Fn,Boot.Fn,n,alpha = 0.05){
 #=====================================================================================>
 
 #=====================================================================================>
-#' \code{sup_t_Band.Fn} constructs the sup-t uniform band
-#' @param Fn G-length vector of the function of interest
-#' @param Sigv the \eqn{G \times 1} vector of standard deviations corresponding to 
-#' estimates Fn
-#' @param DQmat \eqn{G \times L} matrix of standard normal random draws 
-#' from the (joint) distribution of Fn
-#' @param n sample size of the data used to compute Fn
+#' \code{sup_t_Band.LL} constructs the sup-t uniform band following Li & Liao (2020)
+#' @param reg.objs G-length list of regression objects
+#' @param lambda \eqn{\lambda'\beta} is the functional of interest
+#' @param L the number of variates to use in simulating the distribution of sup-t. Should
+#' be supplied or norm.mat should be supplied
+#' @param norm.mat \eqn{k \times L} matrix of standard normal variates used
+#' in computing the bands
+#' @param n sample size of the data used to compute reg.objs
 #' @param alpha significance level
+#' @param seed seed specified if norm.mat=NULL
 #' 
+#' @return Fn: G-length vector of the function estimate
 #' @return LB.Fn: G-length lower Uniform Confidence band
 #' @return UB.Fn: G-length upper Uniform Confidence band
 #' 
-#' @importFrom stats quantile
+#' @importFrom stats quantile rnorm 
+#' @importFrom sandwich vcovHC
+#' @importFrom expm sqrtm
 #' 
 #' @examples 
-#' set.seed(1); DQmat=matrix(rnorm(1000),nrow=5)
-#' sup_t_Band.Fn(Fn=(1:5)/5,Sigv=rep(1,5),DQmat=DQmat,n=100)
+#' set.seed(1); X = rnorm(250,mean=(1:250)/250)
+#' reg.objs = lapply(seq(0.2,0.8,by=0.05), function(t) lm(I(X+t)~1))
+#' sup_t_Band.LL(reg.objs,lambda=1,L=500,n=250,seed=1)
 #' 
 #' @export
 
-sup_t_Band.Fn=function(Fn,Sigv,DQmat,n,alpha=0.05){
+sup_t_Band.LL<- function(reg.objs,lambda,L=NULL,norm.mat=NULL,n,alpha=0.05,seed=NULL){
+  G = length(reg.objs)
+  p.x = length(coef(reg.objs[[1]]))
   
-  #tbmat = abs(DQmat)
-  #for (j in 1:ncol(tbmat)) {tbmat[,j]/Sigv}
+  if(is.null(norm.mat)){
+    if(!is.null(seed))set.seed(seed)
+    norm.mat<- matrix(rnorm(L*p.x),ncol = L)
+  }
   
-  #tbv = apply(tbmat,2,max)
-  #tbv = apply(abs(DQmat),2,max)
-  #c.alf = quantile(tbv,1-alpha,na.rm=T) #critical value of sup_t
-  c.alf = quantile(apply(abs(DQmat),2,max),1-alpha,na.rm=T) #critical value of sup_t
+  Fn = rep(0,G); Sigv = rep(0,G); SigM.sqrt = list()
+  
+  for (id in 1:G) { 
+    SigM.sqrt[[id]] = sqrtm(vcovHC(reg.objs[[id]]))
+    Sigv[id] = sqrt(t(lambda)%*%SigM.sqrt[[id]]%*%lambda)
+    Fn[id] = t(lambda)%*%coef(reg.objs[[id]])
+  }
+  
+  
+  suptfn<- function(l){ 
+    fn=function(id) abs(t(lambda)%*%SigM.sqrt[[id]]%*%norm.mat[,l]/Sigv[id])
+    fn = Vectorize(fn)
+    return(max(fn(1:G)))
+  }
+  
+  supt.vec<- sapply(1:L,suptfn)
+  
+  c.alf = quantile(supt.vec,(1-alpha),na.rm=T) #critical value of sup_t
   
   LB.Fn = Fn - c.alf*Sigv
   UB.Fn = Fn + c.alf*Sigv
   
-  list(LB.Fn=LB.Fn, UB.Fn=UB.Fn)
+  list(Fn=Fn,LB.Fn=LB.Fn, UB.Fn=UB.Fn)
 }
 #=====================================================================================>

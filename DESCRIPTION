@@ -6,7 +6,7 @@ Authors@R: person("Emmanuel", "Tsyawo",
                      email = "estsyawo@gmail.com",
                      role = c("aut", "cre"))
 Description: This package tentatively hosts functions that I use in my work for
-    enhanced accessibility.
+    accessibility.
 Depends: R (>= 2.1.0)
 License: GPL-2
 Encoding: UTF-8
