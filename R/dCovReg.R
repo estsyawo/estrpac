@@ -184,6 +184,138 @@ imlmreg2.fit = function(Y,X,Z,weights=NULL,Kern="Euclid",vctype="HC0",
 
 
 #==========================================================================================>
+#' Nonlinear ICM-IV Regression
+#'
+#' \code{imnlmreg.fit} runs a generic possibly non-linear integrated moment regression allowing 
+#' for different kernels. This variant uses centred instruments in the meat of the sandwich matrix
+#'
+#' @param strtpar vector of starting values; use list() to specify lower and upper bounds for line search
+#' if the parameter is a scalar
+#' @param u.fun function generating the parameterised error
+#' @param Xg.fun function generating the derivative of u.fun()
+#' @param Y outcome variable
+#' @param X matrix of covariates.
+#' @param Z matrix of instruments
+#' @param Intercept logical for include intercept u.fun() is non-linear in the intercept
+#' @param weights a vector of length \eqn{n} of weights for observations
+#' @param Kern type of kernel. See Details for available kernels
+#' @param cluster vector of length \eqn{n} with cluster assignments of observations.
+#' @param clus.est.type options are "A" and "B". "A" sets \eqn{K(Z_i,Z_j)=0} for \eqn{i,j} in the
+#' same cluster while option "B" only does so for \eqn{i=j}.
+#'
+#' @details The \eqn{(i,j)}'th elements of available kernel methods are
+#' \describe{
+#' \item{"Euclid"}{Euclidean distance between two vectors: ||Z_i-Z_j||}
+#' \item{"Gauss.W"}{The weighted Gaussian kernel: exp(-0.5(Z_i-Z_j)'V^{-1}(Z_i-Z_j)) where V is the variance of V}
+#' \item{"Gauss"}{The unweighted Gaussian kernel: exp(-||Z_i-Z_j||^2)}
+#' \item{"DL"}{The kernel of Dominguez & Lobato 2004: \eqn{1/n\sum{l=1}^n I(Z_i\le Z_l)I(Z_j\le Z_l)}}
+#' \item{"Esc6"}{The projected version of the DL in Escanciano 2006.}
+#' \item{"WMD"}{The kernel used in Antoine & Lavergne 2014. See page 60 of paper.}
+#' \item{"WMDF"}{The Fuller (1977)-like modification of the kernel in Antoine & Lavergne 2014. See page 64 of paper.}
+#' }
+#'
+#' @return an IV regression object which also contains coefficients, standard errors, etc.
+#'
+#' @importFrom stats dist
+#' @importFrom sandwich vcovHC
+#' @importFrom ivreg ivreg
+#'
+#' @examples
+#' ## Generate data and run regression
+#' n=200; set.seed(12); X = rnorm(n,1,1); er = (rchisq(n,df=1)-1)/sqrt(2); Z=X
+#' Y = X*(5/4)^2 + (5/4)*(X^2)
+#' u.fun = function(theta,Y,X) Y - X*(theta^2) - (X^2)*theta
+#' Xg.fun = function(theta,X) -2*X*theta - X^2
+#' (imnlmreg.fit(list(a=-3.0,b=3.0),u.fun,Xg.fun,Y,X,Z))
+#' @export
+
+imnlmreg.fit = function(strtpar,u.fun,Xg.fun,Y,X,Z,Intercept=F,weights=NULL,Kern="Euclid",
+                        cluster=NULL,clus.est.type="A"){
+  if(Intercept){
+    X=as.matrix(cbind(1,X))
+  }else{X=as.matrix(X)}
+  
+  n = length(Y)
+  Z = as.matrix(Z)
+  
+  if(!isSymmetric(Z) & Intercept){
+    Mz = Kern.fun(Z,Kern,X[,-1],Y)
+  }else if(!isSymmetric(Z) & !Intercept){
+    Mz = Kern.fun(Z,Kern,X,Y)
+  }else{
+    Mz=Z
+  }
+  
+  if(!is.null(cluster)){
+    uclus<- unique(cluster); G<- length(uclus)
+    ## tailor the Kernel matrix for cluster jackknifing ...
+    if(clus.est.type=="A"){
+      for(g in 1:G){
+        idclus.g<- which(cluster==uclus[g])
+        Mz[idclus.g,idclus.g]<- 0
+      }
+    }else if(clus.est.type=="B"){
+      diag(Mz)<- 0.0
+    }else{
+      stop("Estimator type under clustered data not recognised.")
+    }
+    
+  }#end if(!is.null(cluster))
+  obj=list()
+  #----------- run minimisation
+  # objective function
+  obj_fun<- function(theta){
+    U = u.fun(theta,Y,X)
+    U = U - mean(U)
+    c(crossprod(U,Mz%*%U))
+  }
+  
+  if(length(strtpar)==1){ #univariate case
+     obj$coefficients = optimise(f=obj_fun,interval=(strtpar+c(-1.5,1.5)))$minimum
+     Hess = NULL
+  }else if (length(strtpar)>1 & is.list(strtpar)){
+    obj$coefficients = optimise(f=obj_fun,interval=c(strtpar[[1]],strtpar[[2]]))$minimum
+    Hess = NULL
+  }else{
+    # score function
+    score.fun<- function(theta){
+      U = u.fun(theta,Y,X)
+      Xg = Xg.fun(theta,X)
+      for(j in 1:ncol(Xg)){Xg[,j] = Xg[,j] - mean(Xg[,j])}
+      U = U - mean(U)
+      2*crossprod(U,Mz%*%Xg)
+    }
+    ans=optim(par = strtpar, fn=obj_fun,gr=score.fun,method="BFGS",hessian=T)
+    obj$coefficients = ans$par
+    Hess = ans$hessian/(n*(n-1))
+  }
+  
+  Xg = Xg.fun(obj$coefficients,X)
+  Uhat = u.fun(obj$coefficients,Y,X)
+  Uhat = Uhat - mean(Uhat)
+  if(is.null(Hess)){
+    Hess = crossprod(Xg,Mz%*%Xg)/(n*(n-1))
+  }
+  
+  Haj.Proj = (Xg*c(Mz%*%Uhat) + (Mz%*%Xg)*Uhat)/(n-1)
+  Omg=4*crossprod(Haj.Proj)/n
+  Hessinv = solve(Hess)
+  obj$vcovHC = crossprod(Hessinv,Omg%*%Hessinv)/n
+  obj$HC_Std.Err=sqrt(diag(obj$vcovHC))
+  class(obj)=c(class(obj),"ICM",Kern)
+  obj
+  
+  # res = list()
+  # res$coefficients = par0
+  # res$std.error = ste
+  # res$vcov = vcdC$vcdC
+  # res$residuals = uo #residuals contain the intercept --  mean(u0)
+  # res$fitted.values = lc
+}
+#==========================================================================================>
+
+
+#==========================================================================================>
 #' Generic k-class estimator
 #'
 #' \code{kClassIVreg.fit} runs a generic linear IV model of the k-Class
