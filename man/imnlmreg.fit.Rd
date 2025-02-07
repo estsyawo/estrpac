@@ -64,9 +64,14 @@ The \eqn{(i,j)}'th elements of available kernel methods are
 }
 \examples{
 ## Generate data and run regression
-n=200; set.seed(12); X = rnorm(n,1,1); er = (rchisq(n,df=1)-1)/sqrt(2); Z=X
-Y = X*(5/4)^2 + (5/4)*(X^2)
+n=200; set.seed(12); X = rnorm(n,1,1); er = rchisq(n,df=1)/sqrt(2); Z=X
+Y1 = X*(5/4)^2 + (5/4)*(X^2) + er
 u.fun = function(theta,Y,X) Y - X*(theta^2) - (X^2)*theta
 Xg.fun = function(theta,X) -2*X*theta - X^2
-(imnlmreg.fit(list(a=-3.0,b=3.0),u.fun,Xg.fun,Y,X,Z))
+imnlmreg.fit(list(a=-3.0,b=3.0),u.fun,Xg.fun,Y1,X,Z)
+
+Y2 = exp(X*(5/4) + 1) + er
+u.fun2<- function(par0,Y,X){Y - exp(X\%*\%par0)}
+Xg.fun2<- function(par0,X){X*c(exp(X\%*\%par0))}
+imnlmreg.fit(c(1,1),u.fun2,Xg.fun2,Y2,X,Z,Intercept=T)
 }

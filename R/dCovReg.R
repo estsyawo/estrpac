@@ -93,8 +93,8 @@ imlmreg.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
       Mz=Z
       }
   Zhat = Mz%*%XX/(n-1)
-  obj=ivreg::ivreg(YY~as.matrix(XX)|as.matrix(Zhat),x=TRUE); obj$Z=Z
-  obj$vcovHC=sandwich::vcovHC(obj,type=vctype)
+  obj=ivreg(YY~as.matrix(XX)|as.matrix(Zhat),x=TRUE); obj$Z=Z
+  obj$vcovHC=vcovHC(obj,type=vctype)
   obj$HC_Std.Err=sqrt(diag(obj$vcovHC))
   class(obj)=c(class(obj),"ICM",Kern)
   obj
@@ -130,7 +130,7 @@ imlmreg.fit = function(Y,X,Z,Kern="Euclid",vctype="HC3"){
 #' @return an IV regression object which also contains coefficients, standard errors, etc.
 #'
 #' @importFrom stats dist
-#' @importFrom sandwich vcovHC
+#' @importFrom sandwich vcovHC vcovCL
 #' @importFrom ivreg ivreg
 #'
 #' @examples
@@ -168,12 +168,12 @@ imlmreg2.fit = function(Y,X,Z,weights=NULL,Kern="Euclid",vctype="HC0",
     
   }#end if(!is.null(cluster))
   Zhat = Mz%*%X/(n-1)
-  obj=ivreg::ivreg(Y~as.matrix(X[,-1])|as.matrix(Zhat[,-1]),x=TRUE,weights = weights)
+  obj=ivreg(Y~as.matrix(X[,-1])|as.matrix(Zhat[,-1]),x=TRUE,weights = weights)
   obj$Z=Z; obj$Mz = Mz
   if(is.null(cluster)){
-    obj$vcovHC=sandwich::vcovHC(obj,type=vctype)
+    obj$vcovHC=vcovHC(obj,type=vctype)
   }else{
-    obj$vcovHC=sandwich::vcovCL(obj,cluster = cluster)
+    obj$vcovHC=vcovCL(obj,cluster = cluster)
   }
   
   obj$HC_Std.Err=sqrt(diag(obj$vcovHC))
@@ -216,23 +216,27 @@ imlmreg2.fit = function(Y,X,Z,weights=NULL,Kern="Euclid",vctype="HC0",
 #'
 #' @return an IV regression object which also contains coefficients, standard errors, etc.
 #'
-#' @importFrom stats dist
-#' @importFrom sandwich vcovHC
-#' @importFrom ivreg ivreg
+#' @importFrom stats dist optim optimise
+#' @importFrom energy U_center
 #'
 #' @examples
 #' ## Generate data and run regression
-#' n=200; set.seed(12); X = rnorm(n,1,1); er = (rchisq(n,df=1)-1)/sqrt(2); Z=X
-#' Y = X*(5/4)^2 + (5/4)*(X^2)
+#' n=200; set.seed(12); X = rnorm(n,1,1); er = rchisq(n,df=1)/sqrt(2); Z=X
+#' Y1 = X*(5/4)^2 + (5/4)*(X^2) + er
 #' u.fun = function(theta,Y,X) Y - X*(theta^2) - (X^2)*theta
 #' Xg.fun = function(theta,X) -2*X*theta - X^2
-#' (imnlmreg.fit(list(a=-3.0,b=3.0),u.fun,Xg.fun,Y,X,Z))
+#' imnlmreg.fit(list(a=-3.0,b=3.0),u.fun,Xg.fun,Y1,X,Z)
+#' 
+#' Y2 = exp(X*(5/4) + 1) + er
+#' u.fun2<- function(par0,Y,X){Y - exp(X%*%par0)}
+#' Xg.fun2<- function(par0,X){X*c(exp(X%*%par0))}
+#' imnlmreg.fit(c(1,1),u.fun2,Xg.fun2,Y2,X,Z,Intercept=T)
 #' @export
 
 imnlmreg.fit = function(strtpar,u.fun,Xg.fun,Y,X,Z,Intercept=F,weights=NULL,Kern="Euclid",
                         cluster=NULL,clus.est.type="A"){
   if(Intercept){
-    X=as.matrix(cbind(1,X))
+    X=as.matrix(cbind(X,1))
   }else{X=as.matrix(X)}
   
   n = length(Y)
@@ -285,32 +289,34 @@ imnlmreg.fit = function(strtpar,u.fun,Xg.fun,Y,X,Z,Intercept=F,weights=NULL,Kern
       U = U - mean(U)
       2*crossprod(U,Mz%*%Xg)
     }
-    ans=optim(par = strtpar, fn=obj_fun,gr=score.fun,method="BFGS",hessian=T)
+    #ans=optim(par = strtpar, fn=obj_fun,gr=score.fun,method="BFGS",hessian=T)
+    #ans=optim(par = strtpar, fn=obj_fun,method="BFGS",hessian=T)
+    ans=optim(par = strtpar, fn=obj_fun,method="BFGS",hessian=F)
     obj$coefficients = ans$par
-    Hess = ans$hessian/(n*(n-1))
+    #Hess = ans$hessian/(n*(n-1))
+    Hess = NULL
   }
   
   Xg = Xg.fun(obj$coefficients,X)
+  for(j in 1:ncol(Xg)){Xg[,j] = Xg[,j] - mean(Xg[,j])}
   Uhat = u.fun(obj$coefficients,Y,X)
-  Uhat = Uhat - mean(Uhat)
+  #Uhat = Uhat - mean(Uhat)
+  
   if(is.null(Hess)){
     Hess = crossprod(Xg,Mz%*%Xg)/(n*(n-1))
   }
   
-  Haj.Proj = (Xg*c(Mz%*%Uhat) + (Mz%*%Xg)*Uhat)/(n-1)
-  Omg=4*crossprod(Haj.Proj)/n
+  HP = Mz%*%Xg/(n-1)
+  for(j in 1:ncol(HP)){HP[,j] = HP[,j] - mean(HP[,j])}
+  
+  #Haj.Proj = (Xg*c(Mz%*%Uhat) + (Mz%*%Xg)*Uhat)/(n-1)
+  #Omg=4*crossprod(Haj.Proj)/n
+  Omg = crossprod(HP*c(Uhat))/n
   Hessinv = solve(Hess)
   obj$vcovHC = crossprod(Hessinv,Omg%*%Hessinv)/n
   obj$HC_Std.Err=sqrt(diag(obj$vcovHC))
   class(obj)=c(class(obj),"ICM",Kern)
   obj
-  
-  # res = list()
-  # res$coefficients = par0
-  # res$std.error = ste
-  # res$vcov = vcdC$vcdC
-  # res$residuals = uo #residuals contain the intercept --  mean(u0)
-  # res$fitted.values = lc
 }
 #==========================================================================================>
 
@@ -688,13 +694,13 @@ mmdlmrelv.b_test<- function(X1,X2=NULL,Z,B=199,wmat=NULL,cl=NULL,cluster=NULL){
 
 speclmb.test<- function(reg.Obj,Kern="Euclid",B=199,wmat=NULL,cl=NULL,cluster=NULL){
   if(length(class(reg.Obj))==1){ #for OLS and IV/2SLS
-  if(class(reg.Obj)=="lm"){
+  if(inherits(reg.Obj,"lm")){
     #check if the regression object contains y and x used.
     ifelse(is.null(reg.Obj$y)&is.null(reg.Obj$x),stop("reg.Obj needs to contain x and y."),1)
     regfn=function(Y,X,Z){lm(Y~X)}
     X=reg.Obj$x[,-1]; Y=reg.Obj$y
     Ker=Kern.fun(X,Kern = Kern)
-  }else if(class(reg.Obj)=="ivreg"){
+  }else if(inherits(reg.Obj,"ivreg")){
     #check if the regression object contains y, x, and z used.
     ifelse(is.null(reg.Obj$y)&is.null(reg.Obj$x),stop("reg.Obj needs to contain x, y, and z."),1)
     regfn=function(Y,X,Z){ivreg(Y~as.matrix(X)|as.matrix(Z))}
